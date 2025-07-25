@@ -1,0 +1,94 @@
+name: frontend
+version: 1.0.0
+
+environment:
+  sdk: '>=2.18.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.0
+  flutter_screenutil: ^5.9.3
+  toastification: ^3.0.3
+  http: ^1.1.0
+  web_socket_channel: ^3.0.3
+  firebase_core: ^3.15.1
+  firebase_auth: ^5.6.2
+  firebase_messaging: ^15.2.9
+  firebase_analytics: ^11.5.2
+  flutter_local_notifications: ^19.3.0
+  razorpay_flutter: ^1.3.5
+  shared_preferences: ^2.2.2
+  fluttertoast: ^8.2.12
+  google_fonts: ^6.2.1
+  lottie: ^3.3.1
+  flutter_svg: ^2.0.9
+  provider: ^6.1.2
+  flutter_riverpod: ^2.5.0
+  audioplayers: ^5.2.1
+  go_router: ^16.0.0
+  sqflite: ^2.3.2
+  path: ^1.9.0
+  path_provider: ^2.1.3
+  local_auth: ^2.1.7
+  share_plus: ^7.2.1
+  pinput: ^5.0.1
+  carousel_slider: ^5.1.1
+  flutter_animate: any
+  newton_particles: ^0.2.2
+  confetti: ^0.8.0
+  image_picker: ^1.0.7
+  cached_network_image: ^3.3.1
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  test: any
+  fake_async: any
+  stream_channel: any
+  flutter_lints: ^3.0.2
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+    android: true
+    ios: true
+    image_path: "assets/images/logo.png"
+    min_sdk_android: 21
+
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
+    - assets/icons/
+    - assets/images/
+    - assets/animations/
+    - assets/audio/
+    - assets/tokens/
+    - assets/star_red.svg
+    - assets/star_green.svg
+    - assets/star_blue.svg
+    - assets/star_yellow.svg
+    - assets/icons/debit.svg
+    - assets/icons/credit.svg
+    - assets/images/dice_1.svg
+    - assets/images/dice_2.svg
+    - assets/images/dice_3.svg
+    - assets/images/dice_4.svg
+    - assets/images/dice_5.svg
+    - assets/images/dice_6.svg
+    - assets/images/dice3d_1.svg
+    - assets/images/dice3d_2.svg
+    - assets/images/dice3d_3.svg
+    - assets/images/dice3d_4.svg
+    - assets/images/dice3d_5.svg
+    - assets/images/dice3d_6.svg
+
+#flutter_icons:
+#  android: true
+#  ios: true
+  # Provide a local path to your logo image when running
+  # `flutter pub run flutter_launcher_icons:main`.
+  # image_path: /path/to/your/logo.jpeg
+

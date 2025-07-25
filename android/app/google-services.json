@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1016148662373",
+    "project_id": "ludosamrat-37625",
+    "storage_bucket": "ludosamrat-37625.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1016148662373:android:5ceec57ab767c04ab5ce8c",
+        "android_client_info": {
+          "package_name": "com.ludo.samrat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBNj-zAsUtO2R6-4pyy4WgIooo6eU9A1lM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
