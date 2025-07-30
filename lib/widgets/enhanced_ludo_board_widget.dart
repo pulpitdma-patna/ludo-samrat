@@ -399,6 +399,224 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
     return board;
   }
 
+  final Map<int, int> pathToBoardIndex = {
+    0: 7 * 15 + 1,
+    1: 6 * 15 + 1,
+    2: 5 * 15 + 1,
+    3: 4 * 15 + 1,
+    4: 3 * 15 + 1,
+    5: 2 * 15 + 1,
+    6: 1 * 15 + 1,
+    7: 1 * 15 + 2,
+    8: 1 * 15 + 3,
+    9: 1 * 15 + 4,
+    10: 1 * 15 + 5,
+    11: 1 * 15 + 6,
+    12: 1 * 15 + 7,
+    13: 1 * 15 + 8,
+    14: 2 * 15 + 8,
+    15: 3 * 15 + 8,
+    16: 4 * 15 + 8,
+    17: 5 * 15 + 8,
+    18: 6 * 15 + 8,
+    19: 7 * 15 + 8,
+    20: 7 * 15 + 9,
+    21: 7 * 15 + 10,
+    22: 6 * 15 + 10,
+    23: 5 * 15 + 10,
+    24: 4 * 15 + 10,
+    25: 3 * 15 + 10,
+    26: 2 * 15 + 10,
+    27: 1 * 15 + 10,
+    28: 1 * 15 + 11,
+    29: 1 * 15 + 12,
+    30: 2 * 15 + 12,
+    31: 3 * 15 + 12,
+    32: 4 * 15 + 12,
+    33: 5 * 15 + 12,
+    34: 6 * 15 + 12,
+    35: 7 * 15 + 12,
+    36: 8 * 15 + 12,
+    37: 8 * 15 + 13,
+    38: 8 * 15 + 14,
+    39: 9 * 15 + 14,
+    40: 10 * 15 + 14,
+    41: 11 * 15 + 14,
+    42: 12 * 15 + 14,
+    43: 13 * 15 + 14,
+    44: 14 * 15 + 14,
+    45: 14 * 15 + 13,
+    46: 14 * 15 + 12,
+    47: 14 * 15 + 11,
+    48: 14 * 15 + 10,
+    49: 14 * 15 + 9,
+    50: 14 * 15 + 8,
+    51: 13 * 15 + 8,
+
+    // GREEN home path
+    52: 12 * 15 + 8,
+    53: 11 * 15 + 8,
+    54: 10 * 15 + 8,
+    55: 9 * 15 + 8,
+    56: 8 * 15 + 8,
+    57: 7 * 15 + 8,
+
+    // YELLOW home path
+    58: 7 * 15 + 9,
+    59: 7 * 15 + 10,
+    60: 7 * 15 + 11,
+    61: 7 * 15 + 12,
+    62: 7 * 15 + 13,
+    63: 7 * 15 + 14,
+
+    // BLUE home path
+    64: 8 * 15 + 14,
+    65: 8 * 15 + 13,
+    66: 8 * 15 + 12,
+    67: 8 * 15 + 11,
+    68: 8 * 15 + 10,
+    69: 8 * 15 + 9,
+
+    // RED home path
+    70: 8 * 15 + 1,
+    71: 8 * 15 + 2,
+    72: 8 * 15 + 3,
+    73: 8 * 15 + 4,
+    74: 8 * 15 + 5,
+    75: 8 * 15 + 6,
+  };
+
+  // List<Widget> _buildTokens(
+  //     BuildContext context,
+  //     double cellWidth,
+  //     double cellHeight,
+  //     double tokenSize,
+  //     ConfettiController? controller,
+  //     ) {
+  //   final int columns = widget.columns;
+  //   final settings = Provider.of<SettingsProvider>(context, listen: false);
+  //   final bool colorBlind = settings.colorBlindMode;
+  //   final Map<int, int> placedCount = {};
+  //   final Map<int, int> totalCount = {};
+  //
+  //   final playerColors = widget.playerColors.isEmpty
+  //       ? {1: Colors.green, 2: Colors.yellow, 3: Colors.blue, 0: Colors.red}
+  //       : widget.playerColors;
+  //
+  //   _currentPositions.forEach((_, toks) {
+  //     for (final pos in toks) {
+  //       totalCount[pos] = (totalCount[pos] ?? 0) + 1;
+  //     }
+  //   });
+  //
+  //   final tokens = <Widget>[];
+  //
+  //   _currentPositions.forEach((pid, toks) {
+  //     for (var i = 0; i < toks.length; i++) {
+  //       final index = toks[i];
+  //       double dx;
+  //       double dy;
+  //
+  //       if (index < 0) {
+  //         final homeIdx = -index - 1;
+  //         final gridRow = homeIdx ~/ 2;
+  //         final gridCol = homeIdx % 2;
+  //
+  //         final rows = (widget.boardSize / widget.columns).ceil();
+  //         Rect zone;
+  //         switch (widget.playerCorners[pid] ?? 0) {
+  //           case 0:
+  //             zone = Rect.fromLTWH(0, 0, cellWidth * 6, cellHeight * 6);
+  //             break;
+  //           case 1:
+  //             zone = Rect.fromLTWH(
+  //                 cellWidth * (columns - 6), 0, cellWidth * 6, cellHeight * 6);
+  //             break;
+  //           case 2:
+  //             zone = Rect.fromLTWH(
+  //                 0, cellHeight * (rows - 6), cellWidth * 6, cellHeight * 6);
+  //             break;
+  //           default:
+  //             zone = Rect.fromLTWH(
+  //                 cellWidth * (columns - 6),
+  //                 cellHeight * (rows - 6),
+  //                 cellWidth * 6,
+  //                 cellHeight * 6);
+  //             break;
+  //         }
+  //
+  //         final zoneCellWidth = zone.width / 2;
+  //         final zoneCellHeight = zone.height / 2;
+  //         dx = zone.left +
+  //             gridCol * zoneCellWidth +
+  //             (zoneCellWidth - tokenSize) / 2;
+  //         dy = zone.top +
+  //             gridRow * zoneCellHeight +
+  //             (zoneCellHeight - tokenSize) / 2;
+  //       } else {
+  //         // Corrected mapping using pathToBoardIndex
+  //         final boardIndex = pathToBoardIndex[index];
+  //         if (boardIndex == null) continue; // Skip invalid
+  //
+  //         final col = boardIndex % columns;
+  //         final row = boardIndex ~/ columns;
+  //
+  //         final placed = placedCount[index] ?? 0;
+  //         placedCount[index] = placed + 1;
+  //
+  //         final total = totalCount[index] ?? 1;
+  //         final grid =
+  //         (total <= 1) ? 1 : (total <= 4 ? 2 : (math.sqrt(total)).ceil());
+  //
+  //         const gap = 2.0;
+  //         final gridWidth = grid * tokenSize + (grid - 1) * gap;
+  //         final startX = col * cellWidth + (cellWidth - gridWidth) / 2;
+  //         final startY = row * cellHeight + (cellHeight - gridWidth) / 2;
+  //
+  //         dx = startX + (placed % grid) * (tokenSize + gap);
+  //         dy = startY + (placed ~/ grid) * (tokenSize + gap);
+  //       }
+  //
+  //       String asset;
+  //       final color = playerColors[pid] ?? Colors.red;
+  //       if (color == Colors.blue) {
+  //         asset = 'assets/tokens/token_blue.svg';
+  //       } else if (color == Colors.green) {
+  //         asset = 'assets/tokens/token_green.svg';
+  //       } else if (color == Colors.yellow) {
+  //         asset = 'assets/tokens/token_yellow.svg';
+  //       } else {
+  //         asset = 'assets/tokens/token_red.svg';
+  //       }
+  //
+  //       final canMove = widget.allowedMoves?[pid]?.containsKey(i) ?? false;
+  //       _tokenKeys.putIfAbsent(pid, () => {});
+  //       final key = _tokenKeys[pid]![i] ??= GlobalKey<EnhancedTokenWidgetState>();
+  //
+  //       tokens.add(
+  //         EnhancedTokenWidget(
+  //           key: key,
+  //           position: Offset(dx, dy),
+  //           size: tokenSize,
+  //           asset: asset,
+  //           playerId: pid,
+  //           color: color,
+  //           colorBlindIcon:
+  //           colorBlind ? _colorBlindIcons[pid % _colorBlindIcons.length] : null,
+  //           canMove: canMove,
+  //           isCurrentTurn: widget.currentTurn == pid,
+  //           onTap: () {
+  //             widget.onTokenTap?.call(pid, i);
+  //           },
+  //           confettiController: controller,
+  //         ),
+  //       );
+  //     }
+  //   });
+  //
+  //   return tokens;
+  // }
+
   List<Widget> _buildTokens(
     BuildContext context,
     double cellWidth,
