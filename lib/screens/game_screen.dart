@@ -30,7 +30,8 @@ import '../services/analytics_service.dart';
 
 class GameScreen extends ConsumerStatefulWidget {
   final int gameId;
-  const GameScreen({super.key, required this.gameId});
+  final Map<String, dynamic>? gameData;
+  const GameScreen({super.key, required this.gameId,this.gameData});
 
   @override
   ConsumerState<GameScreen> createState() => _GameScreenState();
@@ -41,6 +42,9 @@ class _GameScreenState extends ConsumerState<GameScreen>
   Map<int, Color> _playerColors = {};
   Map<int, int> _captureCounts = {};
   Map<int, int> _playerCorner = {};
+  Map<int, int> _playerPoint = {};
+  List<int> _playerOrder = [];
+  List<int> _safeCells = [];
   bool _rolling = false;
   Timer? _rollTimeout;
   Timer? _countdownTimer;
@@ -49,6 +53,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
   final AudioPlayer _audioPlayer = AudioPlayer();
   final AudioPlayer _winPlayer = AudioPlayer();
   final ConfettiController _confettiController = ConfettiController();
+  bool _isThreeDice = false;
   bool _wasConfettiPlaying = false;
   List<int>? _lastDice;
   // Particle controller for celebratory bursts.
@@ -67,6 +72,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     unawaited(_audioPlayer.setSourceAsset('audio/dice_roll.mp3'));
     unawaited(_winPlayer.setSourceAsset('win.wav'));
     unawaited(AnalyticsService.logGameStart(widget.gameId));
+    _isThreeDice = widget.gameData != null && widget.gameData!.isNotEmpty && widget.gameData!['engine'] =='three_dice' ? true : false;
     final notifier = ref.read(gameStateProvider(widget.gameId).notifier);
     _winnerSub = notifier.socket.stream.listen((data) {
       final parsed = data is String ? jsonDecode(data) : data;
@@ -103,7 +109,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
     });
     _gameStateSub = ref.listenManual<GameState>(
       gameStateProvider(widget.gameId),
-      (prev, next) {
+          (prev, next) {
         if (prev?.dice != next.dice) {
           setState(() {
             _rolling = false;
@@ -124,13 +130,34 @@ class _GameScreenState extends ConsumerState<GameScreen>
           _ensureCorners(next.startOffsets.isNotEmpty
               ? next.startOffsets
               : {
-                  for (var i = 0; i < next.playerOrder!.length; i++)
-                    next.playerOrder![i]: _offsetForIndex(i)
-                });
+            for (var i = 0; i < next.playerOrder!.length; i++)
+              next.playerOrder![i]: _offsetForIndex(i)
+          });
+        }
+
+        if (!mapEquals(prev?.points, next.points)) {
+          setState(() {
+            _playerPoint = Map<int, int>.from(next.points ?? {});
+          });
+        }
+
+        if (!listEquals(prev?.playerOrder, next.playerOrder)) {
+          setState(() {
+            _playerOrder = List<int>.from(next.playerOrder ?? []);
+          });
+        }
+
+        // Set safe cells once if _starCells is empty
+        if (_safeCells.isEmpty && next.safeCells.isNotEmpty) {
+          setState(() {
+            _safeCells = next.safeCells;
+          });
         }
       },
     );
+
   }
+
 
   Color _colorForOffset(int offset) {
     switch (offset) {
@@ -319,6 +346,49 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final widgets = <Widget>[];
     corners.forEach((pid, corner) {
       if (corner < alignments.length) {
+
+        // widgets.add(
+        //     Container(
+        //       height: 90.h,
+        //       width: 126.w,
+        //       padding: EdgeInsets.symmetric(horizontal: 4.w),
+        //       decoration: BoxDecoration(
+        //         borderRadius: BorderRadius.circular(4.r),
+        //         border: Border.all(
+        //           color: AppColors.brandPrimary,
+        //           width: 2.5,
+        //         ),
+        //         // boxShadow: true
+        //         //     ? [
+        //         //   BoxShadow(
+        //         //     color: AppColors.brandPrimary.withOpacity(0.6),
+        //         //     // blurRadius: _glowAnimation.value,
+        //         //     spreadRadius: _glowAnimation.value / 2,
+        //         //   ),
+        //         // ]
+        //         //     : [],
+        //       ),
+        //       child: Column(
+        //         crossAxisAlignment: CrossAxisAlignment.start,
+        //         mainAxisAlignment: MainAxisAlignment.center,
+        //         children: [
+        //           Row(
+        //             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        //             children: rowItems,
+        //           ),
+        //           SizedBox(height: 4.h),
+        //           Text(
+        //             'P$pid',
+        //             style: AppTextStyles.poppinsMedium.copyWith(
+        //               fontSize: 12.sp,
+        //               color: Colors.white,
+        //             ),
+        //           ),
+        //         ],
+        //       ),
+        //     )
+        // );
+
         widgets.add(
           Align(
             alignment: alignments[corner],
@@ -455,11 +525,15 @@ class _GameScreenState extends ConsumerState<GameScreen>
                         positions: state.positions,
                         playerColors: _playerColors,
                         playerCorners: _playerCorner,
+                        playerOrder: _playerOrder,
+                        playerPoint: _playerPoint,
+                        safeCells: _safeCells,
                         allowedMoves: state.allowedMoves,
                         onTokenTap: _onTokenTap,
                         onCapture: _handleCapture,
                         currentTurn: state.turn,
                         confettiController: _confettiController,
+                        isThreeDice: _isThreeDice,
                         // particleController: _particleController,
                       );
                     },
@@ -526,6 +600,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
                 ],
               ),
             ),
+            if(_isThreeDice)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: DiceWidget(

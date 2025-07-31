@@ -307,6 +307,11 @@ class _BoardWidgetState extends State<BoardWidget>
                         context.watch<SettingsProvider>().boardSaturation,
                     shadows:
                         context.watch<SettingsProvider>().boardShadows,
+                      colors: widget.playerColors,
+                      corners: {},
+                      safeCells: [],
+                    playerOrder: [],
+                    playerPoint: {}
                   ),
 
                 ),
