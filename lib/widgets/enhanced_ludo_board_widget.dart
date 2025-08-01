@@ -391,7 +391,11 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
               ...tokenWidgets,
               Positioned.fill(
                 child:
-                    _AnimatedTriangles(colors: widget.playerColors, active: activeCorner, corners: widget.playerCorners,),
+                    _AnimatedTriangles(
+                      colors: widget.playerColors,
+                      active: activeCorner,
+                      corners: widget.playerCorners,
+                    ),
               ),
             ],
           );
@@ -501,6 +505,129 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
     75: 8 * 15 + 6,
   };
 
+  List<Widget> _buildTokens(
+      BuildContext context,
+      double cellWidth,
+      double cellHeight,
+      double tokenSize,
+      ConfettiController? controller,
+      ) {
+    final int columns = widget.columns;
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final bool colorBlind = settings.colorBlindMode;
+    final Map<int, int> placedCount = {};
+    final Map<int, int> totalCount = {};
+
+    final playerColors = widget.playerColors.isEmpty
+        ? {
+      // 0: Colors.red,
+      173: Colors.blue,
+      174: Colors.green,
+      // 2: Colors.yellow,
+    }
+        : widget.playerColors;
+
+      //  Just For Testing
+    if (_currentPositions.values.every((tokens) => tokens.isEmpty)) {
+      _currentPositions = {
+        173: [41, 39, 39, 39],
+        174: [50, 13, 13, 13]
+      };
+    }
+
+
+
+    // Count total tokens per index
+    _currentPositions.forEach((_, toks) {
+      for (final pos in toks) {
+        totalCount[pos] = (totalCount[pos] ?? 0) + 1;
+      }
+    });
+
+    final tokens = <Widget>[];
+
+    _currentPositions.forEach((pid, toks) {
+      final color = playerColors[pid] ?? Colors.red;
+      final asset = _getTokenAsset(color);
+      final path = getFullPlayerPathByPlayerId(pid);
+
+      for (int i = 0; i < toks.length; i++) {
+        final index = toks[i];
+        double dx, dy;
+
+        if (index < 0) {
+          // Home logic (same as your existing logic)
+          final homeIdx = -index - 1;
+          final gridRow = homeIdx ~/ 2;
+          final gridCol = homeIdx % 2;
+          final rows = (widget.boardSize / widget.columns).ceil();
+
+          Rect zone;
+          switch (widget.playerCorners[pid] ?? 0) {
+            case 0:
+              zone = Rect.fromLTWH(0, 0, cellWidth * 6, cellHeight * 6);
+              break;
+            case 1:
+              zone = Rect.fromLTWH(cellWidth * (columns - 6), 0, cellWidth * 6, cellHeight * 6);
+              break;
+            case 2:
+              zone = Rect.fromLTWH(0, cellHeight * (rows - 6), cellWidth * 6, cellHeight * 6);
+              break;
+            default:
+              zone = Rect.fromLTWH(cellWidth * (columns - 6), cellHeight * (rows - 6), cellWidth * 6, cellHeight * 6);
+              break;
+          }
+
+          final zoneCellWidth = zone.width / 2;
+          final zoneCellHeight = zone.height / 2;
+          dx = zone.left + gridCol * zoneCellWidth + (zoneCellWidth - tokenSize) / 2;
+          dy = zone.top + gridRow * zoneCellHeight + (zoneCellHeight - tokenSize) / 2;
+        } else {
+          // ✨ Path logic (new): Use rotated player path
+          final Offset pos = (index < path.length) ? path[index] : const Offset(6, 0);
+
+          final placed = placedCount[index] ?? 0;
+          placedCount[index] = placed + 1;
+          final total = totalCount[index] ?? 1;
+          final grid = (total <= 1) ? 1 : (total <= 4 ? 2 : (math.sqrt(total)).ceil());
+
+          const gap = 2.0;
+          final gridWidth = grid * tokenSize + (grid - 1) * gap;
+          final startX = pos.dy * cellWidth + (cellWidth - gridWidth) / 2;
+          final startY = pos.dx * cellHeight + (cellHeight - gridWidth) / 2;
+
+          dx = startX + (placed % grid) * (tokenSize + gap);
+          dy = startY + (placed ~/ grid) * (tokenSize + gap);
+        }
+
+        final canMove = widget.allowedMoves?[pid]?.containsKey(i) ?? false;
+        _tokenKeys.putIfAbsent(pid, () => {});
+        final key = _tokenKeys[pid]![i] ??= GlobalKey<EnhancedTokenWidgetState>();
+
+        tokens.add(
+          EnhancedTokenWidget(
+            key: key,
+            position: Offset(dx, dy),
+            size: tokenSize,
+            asset: asset,
+            playerId: pid,
+            color: color,
+            colorBlindIcon: colorBlind ? _colorBlindIcons[pid % _colorBlindIcons.length] : null,
+            canMove: canMove,
+            isCurrentTurn: widget.currentTurn == pid,
+            onTap: () => widget.onTokenTap?.call(pid, i),
+            confettiController: controller,
+          ),
+        );
+      }
+    });
+
+    return tokens;
+  }
+
+
+
+  // first code initial commit
   // List<Widget> _buildTokens(
   //     BuildContext context,
   //     double cellWidth,
@@ -649,7 +776,161 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
   // }
 
 
-  List<Widget> _buildTokens(
+  /// Static clockwise base movement path for Ludo
+   List<Offset> basePath = [
+    Offset(6, 0), Offset(6, 1), Offset(6, 2), Offset(6, 3), Offset(6, 4),
+    Offset(6, 5), Offset(5, 6), Offset(4, 6), Offset(3, 6), Offset(2, 6),
+    Offset(1, 6), Offset(0, 6), Offset(0, 7), Offset(0, 8),
+    Offset(1, 8), Offset(2, 8), Offset(3, 8), Offset(4, 8), Offset(5, 8),
+    Offset(6, 9), Offset(6,10), Offset(6,11), Offset(6,12), Offset(6,13),
+    Offset(6,14), Offset(7,14), Offset(8,14), Offset(8,13), Offset(8,12),
+    Offset(8,11), Offset(8,10), Offset(8, 9), Offset(9, 8), Offset(10, 8),
+    Offset(11, 8), Offset(12, 8), Offset(13, 8), Offset(14, 8), Offset(14, 7),
+    Offset(14, 6), Offset(13, 6), Offset(12, 6), Offset(11, 6), Offset(10, 6),
+    Offset(9, 6), Offset(8, 5), Offset(8, 4), Offset(8, 3), Offset(8, 2),
+    Offset(8, 1), Offset(8, 0), Offset(7, 0),
+  ];
+
+  // Each player's entry index in basePath
+   final playerEntryIndex = {
+    0: 0,  // Red
+    1: 13, // Green
+    2: 26, // Yellow
+    3: 39, // Blue
+  };
+
+// Final home paths for each player (index 52-57)
+  final Map<int, List<Offset>> finalHomePaths = {
+    0: [Offset(7, 1), Offset(7, 2), Offset(7, 3), Offset(7, 4), Offset(7, 5), Offset(7, 6)], // Red
+    1: [Offset(1, 7), Offset(2, 7), Offset(3, 7), Offset(4, 7), Offset(5, 7), Offset(6, 7)], // Green
+    2: [Offset(7, 13), Offset(7, 12), Offset(7, 11), Offset(7, 10), Offset(7, 9), Offset(7, 8)], // Yellow
+    3: [Offset(13, 7), Offset(12, 7), Offset(11, 7), Offset(10, 7), Offset(9, 7), Offset(8, 7)], // Blue
+  };
+
+
+  /// Returns the rotated path for a given player color
+  List<Offset> getPlayerPath(String color) {
+    int offset = 0;
+
+    switch (color.toLowerCase()) {
+      case 'red':
+        offset = 0;
+        break;
+      case 'green':
+        offset = 13;
+        break;
+      case 'yellow':
+        offset = 26;
+        break;
+      case 'blue':
+        offset = 39;
+        break;
+      default:
+        offset = 0;
+    }
+
+    return [
+      ...basePath.sublist(offset),
+      ...basePath.sublist(0, offset),
+    ];
+  }
+
+  final Map<int, List<Offset>> homePaths = {
+    0: [
+      Offset(7, 1),
+      Offset(7, 2),
+      Offset(7, 3),
+      Offset(7, 4),
+      Offset(7, 5),
+      Offset(7, 6), // center
+    ],
+    1: [
+      Offset(1, 7),
+      Offset(2, 7),
+      Offset(3, 7),
+      Offset(4, 7),
+      Offset(5, 7),
+      Offset(6, 7), // center
+    ],
+    2: [
+      Offset(7, 13),
+      Offset(7, 12),
+      Offset(7, 11),
+      Offset(7, 10),
+      Offset(7, 9),
+      Offset(7, 8), // center
+    ],
+    3: [
+      Offset(13, 7),
+      Offset(12, 7),
+      Offset(11, 7),
+      Offset(10, 7),
+      Offset(9, 7),
+      Offset(8, 7), // center
+    ],
+  };
+
+  List<Offset> getFullPlayerPathByPlayerId(int playerId) {
+    final offsetMap = {
+      0: 0,   // Red
+      1: 13,  // Green
+      2: 26,  // Yellow
+      3: 39,  // Blue
+    };
+
+    final finalHomeMap = {
+      0: [
+        Offset(1, 7), Offset(2, 7), Offset(3, 7),
+        Offset(4, 7), Offset(5, 7), Offset(6, 7),
+      ],
+      1: [
+        Offset(7, 1), Offset(7, 2), Offset(7, 3),
+        Offset(7, 4), Offset(7, 5), Offset(7, 6),
+      ],
+      2: [
+        Offset(13, 7), Offset(12, 7), Offset(11, 7),
+        Offset(10, 7), Offset(9, 7), Offset(8, 7),
+      ],
+      3: [
+        Offset(7, 13), Offset(7, 12), Offset(7, 11),
+        Offset(7, 10), Offset(7, 9), Offset(7, 8),
+      ],
+    };
+
+    final baseOffset = offsetMap[playerId] ?? 0;
+    final finalHome = finalHomeMap[playerId] ?? [];
+
+    final rotatedPath = [
+      ...basePath.sublist(baseOffset),
+      ...basePath.sublist(0, baseOffset),
+    ];
+
+    return [...rotatedPath, ...finalHome];
+  }
+
+
+
+
+  /// Working Fun
+  // List<Offset> getPlayerPathByPlayerId(int playerId) {
+  //   // Each player's path offset
+  //   const offsetMap = {
+  //     0: 0,   // Red
+  //     1: 13,  // Green
+  //     2: 26,  // Yellow
+  //     3: 39,  // Blue
+  //   };
+  //
+  //   final offset = offsetMap[playerId] ?? 0;
+  //
+  //   return [
+  //     ...basePath.sublist(offset),
+  //     ...basePath.sublist(0, offset),
+  //   ];
+  // }
+
+
+ /* List<Widget> _buildTokens(
       BuildContext context,
       double cellWidth,
       double cellHeight,
@@ -663,10 +944,8 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
     final Map<int, int> placedCount = {};
     final Map<int, int> totalCount = {};
 
-    // Detect home token positions
     const Set<int> homeIndexes = {0, 13, 26, 39};
 
-    // Count overlapping tokens per board position (except homes)
     _currentPositions.forEach((_, toks) {
       for (final pos in toks) {
         if (pos != -1 && !homeIndexes.contains(pos)) {
@@ -677,7 +956,6 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
 
     final tokens = <Widget>[];
 
-    // Layout for 4 home positions inside each corner
     const homeOffsets = [
       Offset(1.5, 1.5),
       Offset(3.5, 1.5),
@@ -685,7 +963,6 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
       Offset(3.5, 3.5),
     ];
 
-    // Determine corner index based on home tile value
     int _cornerForOffset(int offset) {
       switch (offset) {
         case 0:
@@ -701,7 +978,6 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
       }
     }
 
-    // Generate playerCorners dynamically
     Map<int, int> _generatePlayerCorners(Map<int, List<int>> positions) {
       return positions.map((pid, toks) {
         final home = toks.firstWhere(
@@ -713,10 +989,8 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
       });
     }
 
-    // Get corners based on current tokens
     final playerCorners = _generatePlayerCorners(_currentPositions);
 
-    // Dynamic zone origin based on corner
     Offset zoneOrigin(int corner) {
       switch (corner) {
         case 0:
@@ -732,7 +1006,6 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
       }
     }
 
-    // Player colors
     final playerColors = widget.playerColors.isEmpty
         ? {
       0: Colors.red,
@@ -742,7 +1015,6 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
     }
         : widget.playerColors;
 
-    // Loop through all player tokens
     _currentPositions.forEach((pid, toks) {
       final color = playerColors[pid] ?? Colors.red;
       final asset = _getTokenAsset(color);
@@ -751,14 +1023,12 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
 
       for (int i = 0; i < toks.length; i++) {
         final index = toks[i];
-
         final key = _tokenKeys[pid]?[i] ?? GlobalKey<EnhancedTokenWidgetState>();
         _tokenKeys.putIfAbsent(pid, () => {})[i] = key;
 
-        final isHomeToken = widget.isThreeDice && (index == -1 || homeIndexes.contains(index));
+        final showInHome = !widget.isThreeDice || index == -1 || homeIndexes.contains(index);
 
-        if (isHomeToken) {
-          // Home zone layout
+        if (showInHome) {
           final offset = homeOffsets[i % 4];
           final dx = (base.dx + offset.dx) * cellWidth;
           final dy = (base.dy + offset.dy) * cellHeight;
@@ -781,9 +1051,10 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
             ),
           );
         } else {
-          // Board token layout
-          final col = index % columns;
-          final row = index ~/ columns;
+          final playerPath = getPlayerPathByPlayerId(pid);
+          final pos = (index >= 0 && index < playerPath.length)
+              ? playerPath[index]
+              : const Offset(6, 0); // fallback
 
           final placed = placedCount[index] ?? 0;
           placedCount[index] = placed + 1;
@@ -795,8 +1066,8 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
 
           const gap = 2.0;
           final gridWidth = grid * tokenSize + (grid - 1) * gap;
-          final startX = col * cellWidth + (cellWidth - gridWidth) / 2;
-          final startY = row * cellHeight + (cellHeight - gridWidth) / 2;
+          final startX = pos.dy * cellWidth + (cellWidth - gridWidth) / 2;
+          final startY = pos.dx * cellHeight + (cellHeight - gridWidth) / 2;
 
           final dx = startX + (placed % grid) * (tokenSize + gap);
           final dy = startY + (placed ~/ grid) * (tokenSize + gap);
@@ -825,7 +1096,8 @@ class _EnhancedLudoBoardWidgetState extends State<EnhancedLudoBoardWidget>
     });
 
     return tokens;
-  }
+  }*/
+
 
 
 
@@ -933,11 +1205,30 @@ class _AnimatedTriangles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final defaultColors = {
+      0: Colors.red,
+      1: Colors.green,
+      2: Colors.blue,
+      3: Colors.yellow,
+    };
+
+    final colorMap = colors.isEmpty ? defaultColors : colors;
+
+    // Fallback to all corners 0–3 if corners are empty
+    final fallbackCorners = {
+      0: 0, // Red at Top-Left
+      1: 1, // Green at Top-Right
+      2: 2, // Blue at Bottom-Left
+      3: 3, // Yellow at Bottom-Right
+    };
+
+    final usedCorners = corners.isEmpty ? fallbackCorners : corners;
+
     return Stack(
-      children: corners.entries.map((entry) {
+      children: usedCorners.entries.map((entry) {
         final pid = entry.key;
-        final corner = entry.value; // corner index (0–3)
-        final color = colors[pid] ?? Colors.grey;
+        final corner = entry.value;
+        final color = colorMap[pid] ?? Colors.grey;
         final highlight = color.withOpacity(0.7);
 
         return Positioned.fill(
@@ -957,6 +1248,7 @@ class _AnimatedTriangles extends StatelessWidget {
       }).toList(),
     );
   }
+
 }
 
 class _TrianglePainter extends CustomPainter {

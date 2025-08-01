@@ -115,6 +115,11 @@ class BoardPainter extends CustomPainter {
     final cellWidth = size.width / columns;
     final cellHeight = size.height / rows;
 
+    final redPath = getPlayerPath('red');
+    final greenPath = getPlayerPath('green');
+    final yellowPath = getPlayerPath('yellow');
+    final bluePath = getPlayerPath('blue');
+
     final scheme = palette.colors;
 
     _drawBackground(canvas, size);
@@ -124,10 +129,18 @@ class BoardPainter extends CustomPainter {
     _drawCenterSquare(canvas, cellWidth, cellHeight);
     _drawFinalPaths(canvas, cellWidth, cellHeight, scheme);
     // _dynamicDrawFinalPaths(canvas, cellWidth, cellHeight,corners, colors);
-    _drawStars(canvas, cellWidth, cellHeight);
     _drawCenterTriangles(canvas, size, cellWidth, cellHeight, scheme);
     _drawCornerEmbellishments(canvas, size, cellWidth, cellHeight);
-    _drawGridLines(canvas, size, cellWidth, cellHeight);
+    // _drawMovementPathOnly(canvas, cellWidth, cellHeight, redPath, Colors.red);
+    // _drawMovementPathOnly(canvas, cellWidth, cellHeight, greenPath, Colors.green);
+    // _drawMovementPathOnly(canvas, cellWidth, cellHeight, yellowPath, Colors.yellow.shade700);
+    _drawMovementPathOnly(canvas, cellWidth, cellHeight, bluePath,);
+    _drawStars(canvas, cellWidth, cellHeight);
+    // _drawFinalHomePath(canvas, cellWidth, cellHeight, finalPaths['red']!, Colors.red);
+    // _drawFinalHomePath(canvas, cellWidth, cellHeight, finalPaths['green']!, Colors.green);
+    // _drawFinalHomePath(canvas, cellWidth, cellHeight, finalPaths['blue']!, Colors.blue.shade700);
+    // _drawFinalHomePath(canvas, cellWidth, cellHeight, finalPaths['blue']!, Colors.blue);
+    // _drawGridLines(canvas, size, cellWidth, cellHeight);
     _drawOuterBorder(canvas, size);
   }
 
@@ -548,28 +561,28 @@ class BoardPainter extends CustomPainter {
     }
 
     /// 🟢 TOP path
-    final topPathColor = _lighten(scheme.green, 0.3);
+    final topPathColor = _lighten(scheme.green, 0.2);
     for (int r = 0; r < 6; r++) {
       drawPathRect(Rect.fromLTWH(cellWidth * 7, cellHeight * (r + 1), cellWidth, cellHeight), topPathColor);
     }
     drawArrow(Offset(cellWidth * 7.5, cellHeight * 1.5), Offset(cellWidth * 7.5, cellHeight * 6.5), topPathColor);
 
     /// 🟡 RIGHT path
-    final rightPathColor = _lighten(scheme.yellow, 0.3);
+    final rightPathColor = _lighten(scheme.yellow, 0.1);
     for (int c = 0; c < 6; c++) {
       drawPathRect(Rect.fromLTWH(cellWidth * (c + 8), cellHeight * 7, cellWidth, cellHeight), rightPathColor);
     }
     drawArrow(Offset(cellWidth * 13.5, cellHeight * 7.5), Offset(cellWidth * 8.5, cellHeight * 7.5), rightPathColor);
 
     /// 🔵 BOTTOM path
-    final bottomPathColor = _lighten(scheme.blue, 0.3);
+    final bottomPathColor = _lighten(scheme.blue, 0.2);
     for (int r = 0; r < 6; r++) {
       drawPathRect(Rect.fromLTWH(cellWidth * 7, cellHeight * (r + 8), cellWidth, cellHeight), bottomPathColor);
     }
     drawArrow(Offset(cellWidth * 7.5, cellHeight * 13.5), Offset(cellWidth * 7.5, cellHeight * 8.5), bottomPathColor);
 
     /// 🔴 LEFT path
-    final leftPathColor = _lighten(scheme.red, 0.3);
+    final leftPathColor = _lighten(scheme.red, 0.2);
     for (int c = 0; c < 6; c++) {
       drawPathRect(Rect.fromLTWH(cellWidth * (c + 1), cellHeight * 7, cellWidth, cellHeight), leftPathColor);
     }
@@ -696,6 +709,140 @@ class BoardPainter extends CustomPainter {
     }
   }
 
+  final List<Offset> basePath = [
+    Offset(6, 0), Offset(6, 1), Offset(6, 2), Offset(6, 3), Offset(6, 4), Offset(6, 5),
+    Offset(5, 6), Offset(4, 6), Offset(3, 6), Offset(2, 6), Offset(1, 6), Offset(0, 6),
+    Offset(0, 7), Offset(0, 8), Offset(1, 8), Offset(2, 8), Offset(3, 8), Offset(4, 8),
+    Offset(5, 8), Offset(6, 9), Offset(6, 10), Offset(6, 11), Offset(6, 12), Offset(6, 13),
+    Offset(6, 14), Offset(7, 14), Offset(8, 14), Offset(8, 13), Offset(8, 12), Offset(8, 11),
+    Offset(8, 10), Offset(8, 9), Offset(9, 8), Offset(10, 8), Offset(11, 8), Offset(12, 8),
+    Offset(13, 8), Offset(14, 8), Offset(14, 7), Offset(14, 6), Offset(13, 6), Offset(12, 6),
+    Offset(11, 6), Offset(10, 6), Offset(9, 6), Offset(8, 5), Offset(8, 4), Offset(8, 3),
+    Offset(8, 2), Offset(8, 1), Offset(8, 0), Offset(7, 0),
+  ];
+
+  final Map<String, List<Offset>> finalPaths = {
+    'red':    [Offset(1,7), Offset(2,7), Offset(3,7), Offset(4,7), Offset(5,7), Offset(6,7)],
+    'green':  [Offset(7,1), Offset(7,2), Offset(7,3), Offset(7,4), Offset(7,5), Offset(7,6)],
+    'yellow': [Offset(13,7), Offset(12,7), Offset(11,7), Offset(10,7), Offset(9,7), Offset(8,7)],
+    'blue':   [Offset(7,13), Offset(7,12), Offset(7,11), Offset(7,10), Offset(7,9), Offset(7,8)],
+  };
+
+
+  List<Offset> getPlayerPath(String color) {
+    int offset = 0;
+
+    switch (color.toLowerCase()) {
+      case 'red':
+        offset = 0;
+        break;
+      case 'green':
+        offset = 13;
+        break;
+      case 'yellow':
+        offset = 26;
+        break;
+      case 'blue':
+        offset = 39;
+        break;
+      default:
+        offset = 0;
+    }
+
+    return [
+      ...basePath.sublist(offset),
+      ...basePath.sublist(0, offset),
+    ];
+  }
+
+
+  void _drawMovementPathOnly(
+      Canvas canvas,
+      double cellWidth,
+      double cellHeight,
+      List<Offset> path,
+      ) {
+    final borderPaint = Paint()
+      ..color = Colors.black.withOpacity(0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.6;
+
+    final fillPaint = Paint()
+      ..color = const Color(0xFFFFFFFF)
+      ..style = PaintingStyle.fill;
+
+    for (final cell in path) {
+      final rect = Rect.fromLTWH(
+        cell.dy * cellWidth,
+        cell.dx * cellHeight,
+        cellWidth,
+        cellHeight,
+      );
+
+      canvas.drawRect(rect, fillPaint);
+      canvas.drawRect(rect, borderPaint);
+    }
+  }
+
+  void _drawFinalHomePath(
+      Canvas canvas,
+      double cellWidth,
+      double cellHeight,
+      List<Offset> path,
+      Color color,
+      ) {
+    final fillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final borderPaint = Paint()
+      ..color = Colors.black.withOpacity(0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.6;
+
+    for (final cell in path) {
+      final rect = Rect.fromLTWH(
+        cell.dy * cellWidth,
+        cell.dx * cellHeight,
+        cellWidth,
+        cellHeight,
+      );
+      canvas.drawRect(rect, fillPaint);
+      canvas.drawRect(rect, borderPaint);
+    }
+  }
+
+
+  // void _drawMovementPathOnly(
+  //     Canvas canvas,
+  //     double cellWidth,
+  //     double cellHeight,
+  //     List<Offset> path,
+  //     Color color,
+  //     ) {
+  //   final pathPaint = Paint()
+  //     ..color = color.withOpacity(0.25)
+  //     ..style = PaintingStyle.fill;
+  //
+  //   final borderPaint = Paint()
+  //     ..color = Colors.black.withOpacity(0.3)
+  //     ..style = PaintingStyle.stroke
+  //     ..strokeWidth = 1;
+  //
+  //   for (final cell in path) {
+  //     final rect = Rect.fromLTWH(
+  //       cell.dy * cellWidth,
+  //       cell.dx * cellHeight,
+  //       cellWidth,
+  //       cellHeight,
+  //     );
+  //     canvas.drawRect(rect, pathPaint);
+  //     canvas.drawRect(rect, borderPaint);
+  //   }
+  // }
+
+
+
   // void _drawGridLines(Canvas canvas, Size size, double cellWidth, double cellHeight) {
   //   final gridPaint = Paint()
   //     ..color = Colors.grey.shade300
@@ -743,7 +890,7 @@ class BoardPainter extends CustomPainter {
 
   void _drawOuterBorder(Canvas canvas, Size size) {
     final borderPaint = Paint()
-      ..color = const Color(0xffBE5D30)
+      ..color = Colors.blue
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8.0;
 

@@ -24,24 +24,26 @@ class PlayerStatusPanel extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (final pid in entries)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      color: playerColors[pid] ?? Colors.grey,
-                      shape: BoxShape.circle,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        color: playerColors[pid] ?? Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'P$pid: '
-                    '${positions[pid]?.length ?? 0} left, '
-                    '${captures[pid] ?? 0} captured',
-                  ),
-                ],
+                    Text(
+                      'P$pid: ${positions[pid]?.length ?? 0} left, ${captures[pid] ?? 0} captured',
+                      style: const TextStyle(fontSize: 11), // smaller font
+                    ),
+                  ],
+                ),
               ),
           ],
         ),
@@ -49,3 +51,4 @@ class PlayerStatusPanel extends StatelessWidget {
     );
   }
 }
+

@@ -4,6 +4,10 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_svg/svg.dart' show SvgPicture;
+import 'package:frontend/app_images.dart';
+import 'package:frontend/constants.dart';
+import 'package:frontend/utils/svg_icon.dart';
 
 import '../services/socket_service.dart';
 import '../widgets/enhanced_ludo_board_widget.dart';
@@ -315,124 +319,318 @@ class _GameScreenState extends ConsumerState<GameScreen>
     final state = ref.watch(gameStateProvider(widget.gameId));
     _ensureColors(state.positions.keys, state.startOffsets);
     _ensureCorners(state.startOffsets);
-    final rows = <Widget>[];
-    state.positions.forEach((pid, toks) {
-      rows.add(
-        Row(
-          children: [
-            Text('Player $pid'),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: (_rolling || state.turn != pid)
-                  ? null
-                  : () => _sendRoll(pid),
-              child: const Text('Roll'),
-            ),
-          ],
+
+    final int? currentTurn = state.turn;
+
+    return Center(
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          shape: const CircleBorder(),
+          padding: const EdgeInsets.all(8),
+          // backgroundColor: Colors.blue, // customize if needed
+          // foregroundColor: Colors.white,
         ),
-      );
-    });
-    if (rows.isEmpty) return const SizedBox.shrink();
-    return Column(children: rows);
+        onPressed: _rolling ? null : () => _sendRoll(currentTurn ?? 0),
+        child: Text(
+          currentTurn!= null ? "P$currentTurn\nRoll" :"Roll",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
   }
 
+
+
+  // Widget _buildControls() {
+  //   final state = ref.watch(gameStateProvider(widget.gameId));
+  //   _ensureColors(state.positions.keys, state.startOffsets);
+  //   _ensureCorners(state.startOffsets);
+  //   final rows = <Widget>[];
+  //   state.positions.forEach((pid, toks) {
+  //     rows.add(
+  //       Row(
+  //         children: [
+  //           Text('Player $pid'),
+  //           const SizedBox(width: 8),
+  //           ElevatedButton(
+  //             onPressed: (_rolling || state.turn != pid)
+  //                 ? null
+  //                 : () => _sendRoll(pid),
+  //             child: const Text('Roll'),
+  //           ),
+  //         ],
+  //       ),
+  //     );
+  //   });
+  //   if (rows.isEmpty) return const SizedBox.shrink();
+  //   return Column(children: rows);
+  // }
+
+
   List<Widget> _buildAvatars(Map<int, int> corners) {
+    final state = ref.watch(gameStateProvider(widget.gameId));
+
     final alignments = [
       Alignment.topLeft,
       Alignment.topRight,
       Alignment.bottomLeft,
       Alignment.bottomRight,
     ];
+
+    // Helper to render dice face (SVG or fallback text)
+    Widget _buildDiceFace(int value, double size) {
+      final path = 'assets/images/dice3d_$value.svg';
+
+      return FutureBuilder<bool>(
+        future: rootBundle.load(path).then((_) => true).catchError((_) => false),
+        builder: (context, snapshot) {
+          final hasAsset = snapshot.data == true;
+          final Widget child = hasAsset
+              ? SvgPicture.asset(path, width: size * 0.8, height: size * 0.8)
+              : Text(
+            '$value',
+            style: TextStyle(fontSize: size * 0.5, fontWeight: FontWeight.bold),
+          );
+
+          return Container(
+            width: size,
+            height: size,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+              ],
+            ),
+            child: child,
+          );
+        },
+      );
+    }
+
     final widgets = <Widget>[];
+
     corners.forEach((pid, corner) {
       if (corner < alignments.length) {
+        // Layout rules
+        bool nameOnTop = (corner == 2 || corner == 3); // bottom corners
+        bool avatarOnLeft = (corner == 1 || corner == 3); // topRight & bottomRight
+        bool sideProfileOnLeft = !avatarOnLeft;
 
-        // widgets.add(
-        //     Container(
-        //       height: 90.h,
-        //       width: 126.w,
-        //       padding: EdgeInsets.symmetric(horizontal: 4.w),
-        //       decoration: BoxDecoration(
-        //         borderRadius: BorderRadius.circular(4.r),
-        //         border: Border.all(
-        //           color: AppColors.brandPrimary,
-        //           width: 2.5,
-        //         ),
-        //         // boxShadow: true
-        //         //     ? [
-        //         //   BoxShadow(
-        //         //     color: AppColors.brandPrimary.withOpacity(0.6),
-        //         //     // blurRadius: _glowAnimation.value,
-        //         //     spreadRadius: _glowAnimation.value / 2,
-        //         //   ),
-        //         // ]
-        //         //     : [],
-        //       ),
-        //       child: Column(
-        //         crossAxisAlignment: CrossAxisAlignment.start,
-        //         mainAxisAlignment: MainAxisAlignment.center,
-        //         children: [
-        //           Row(
-        //             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        //             children: rowItems,
-        //           ),
-        //           SizedBox(height: 4.h),
-        //           Text(
-        //             'P$pid',
-        //             style: AppTextStyles.poppinsMedium.copyWith(
-        //               fontSize: 12.sp,
-        //               color: Colors.white,
-        //             ),
-        //           ),
-        //         ],
-        //       ),
-        //     )
-        // );
+        // Name container
+        Widget nameWidget = Container(
+          width: 126.w,
+          decoration: BoxDecoration(
+            color: _playerColors[pid] ?? Colors.grey,
+            borderRadius: BorderRadius.circular(2.r),
+          ),
+          child: Text(
+            'P$pid',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.poppinsMedium.copyWith(
+              fontSize: 12.sp,
+              color: Colors.black,
+            ),
+          ),
+        );
 
+        // Show selected dice in 56x56 container
+        final diceValue = state.selectedDie ?? 0;
+        Widget avatarBox = (state.turn == pid && diceValue != 0)
+            ? _buildDiceFace(diceValue, 56.w)
+            : Container(
+          height: 56.w,
+          width: 56.w,
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            border: Border.all(color: AppColors.white.withOpacity(0.3)),
+            borderRadius: BorderRadius.circular(4.r),
+          ),
+        );
+
+        // Profile icon container
+        Widget sideProfile = Container(
+          height: 46.w,
+          width: 46.w,
+          decoration: BoxDecoration(
+            color: Colors.black26,
+            borderRadius: BorderRadius.circular(2.r),
+          ),
+          child: svgIcon(
+            name: AppImages.profile,
+            width: 26.w,
+            height: 24.h,
+            color: Colors.grey,
+          ),
+        );
+
+        // Arrange avatar row
+        List<Widget> avatarRowChildren = sideProfileOnLeft
+            ? [sideProfile, SizedBox(width: 4.w), avatarBox]
+            : [avatarBox, SizedBox(width: 4.w), sideProfile];
+
+        // Assemble avatar column
+        Widget avatar = Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            if (nameOnTop) nameWidget,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: avatarRowChildren,
+            ),
+            if (!nameOnTop) nameWidget,
+          ],
+        );
+
+        // Final aligned container
         widgets.add(
           Align(
             alignment: alignments[corner],
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: CircleAvatar(
-              radius: 14,
-              backgroundColor: _playerColors[pid] ?? Colors.grey,
-              child: Text(
-                'P$pid',
-                style: const TextStyle(fontSize: 12, color: Colors.white),
+            child: Container(
+              height: 90.h,
+              width: 126.w,
+              margin: EdgeInsets.only(
+                bottom: (corner == 0 || corner == 1) ? 8.h : 0,
+                top: (corner == 2 || corner == 3) ? 8.h : 0,
               ),
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: state.turn == pid
+                    ? Border.all(color: Colors.blue, width: 3)
+                    : null,
+                boxShadow: [
+                  BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+                ],
+              ),
+              child: avatar,
             ),
           ),
-        ),
-      );
+        );
       }
     });
+
     return widgets;
   }
+
+
+
+
+  Widget buildFace(int value, double size) {
+    final path = 'assets/images/dice3d_$value.svg';
+
+    final decoration = BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      boxShadow: [
+        BoxShadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 2)),
+      ],
+    );
+
+    return FutureBuilder<bool>(
+      future: rootBundle.load(path).then((_) => true).catchError((_) => false),
+      builder: (context, snapshot) {
+        final hasAsset = snapshot.data == true;
+        final Widget child = hasAsset
+            ? SvgPicture.asset(path, width: size * 0.8, height: size * 0.8)
+            : Text('$value',
+            style: TextStyle(fontSize: size * 0.5, fontWeight: FontWeight.bold));
+
+        return Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: decoration,
+          child: child,
+        );
+      },
+    );
+  }
+
+  // List<Widget> _buildAvatars(Map<int, int> corners) {
+  //   final alignments = [
+  //     Alignment.topLeft,
+  //     Alignment.topRight,
+  //     Alignment.bottomLeft,
+  //     Alignment.bottomRight,
+  //   ];
+  //   final widgets = <Widget>[];
+  //   corners.forEach((pid, corner) {
+  //     if (corner < alignments.length) {
+  //       widgets.add(
+  //         Align(
+  //           alignment: alignments[corner],
+  //         child: Padding(
+  //           padding: const EdgeInsets.all(4),
+  //           child: CircleAvatar(
+  //             radius: 14,
+  //             backgroundColor: _playerColors[pid] ?? Colors.grey,
+  //             child: Text(
+  //               'P$pid',
+  //               style: const TextStyle(fontSize: 12, color: Colors.white),
+  //             ),
+  //           ),
+  //         ),
+  //       ),
+  //     );
+  //     }
+  //   });
+  //   return widgets;
+  // }
 
   Future<bool> _onWillPop() async {
     final shouldQuit = await showDialog<bool>(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Quit Match?'),
-        content: const Text('Are you sure you want to quit the match?'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.red),
+             SizedBox(width: 8.w),
+            const Text('Quit Match?'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to quit the match?',
+          style: TextStyle(fontSize: 16),
+        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+            ),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
             child: const Text('Quit'),
           ),
         ],
       ),
     );
+
     if (shouldQuit == true) {
       final roomId = context.read<GameProvider>().roomIdForGame(widget.gameId);
-      final matchId = context.read<GameProvider>().matchIdForGame(
-        widget.gameId,
-      );
+      final matchId = context.read<GameProvider>().matchIdForGame(widget.gameId);
+
       if (roomId != null && matchId != null) {
         final partsRes = await QuickPlayApi().participants(roomId);
         if (partsRes.isSuccess && partsRes.data != null) {
@@ -455,8 +653,10 @@ class _GameScreenState extends ConsumerState<GameScreen>
           }
         }
       }
+
       unawaited(AnalyticsService.logGameEnd(widget.gameId));
       ref.invalidate(gameStateProvider(widget.gameId));
+
       if (context.canPop()) {
         context.pop();
       } else {
@@ -464,14 +664,17 @@ class _GameScreenState extends ConsumerState<GameScreen>
       }
       return false;
     }
+
     return false;
   }
+
 
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: AppScaffold(
+        backgroundGradient: AppGradients.blueHorizontal,
         drawer: const AppDrawer(),
         appBar: GradientAppBar(
           leading: InkWell(
@@ -509,113 +712,157 @@ class _GameScreenState extends ConsumerState<GameScreen>
             ],
           ),
         ),
-        body: SafeArea(
-          child: Column(
-          children: [
-            Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Builder(
-                    builder: (context) {
-                      final state = ref.watch(gameStateProvider(widget.gameId));
-                      _ensureColors(state.positions.keys, state.startOffsets);
-                      _ensureCorners(state.startOffsets);
-                      return EnhancedLudoBoardWidget(
-                        positions: state.positions,
-                        playerColors: _playerColors,
-                        playerCorners: _playerCorner,
-                        playerOrder: _playerOrder,
-                        playerPoint: _playerPoint,
-                        safeCells: _safeCells,
-                        allowedMoves: state.allowedMoves,
-                        onTokenTap: _onTokenTap,
-                        onCapture: _handleCapture,
-                        currentTurn: state.turn,
-                        confettiController: _confettiController,
-                        isThreeDice: _isThreeDice,
-                        // particleController: _particleController,
-                      );
-                    },
-                  ),
-                  Positioned(
-                    top: 8,
-                    child: Builder(
-                      builder: (context) {
-                        final state =
-                            ref.watch(gameStateProvider(widget.gameId));
-                        final turn = state.turn;
-                        int? timeLeft;
-                        if (state.moveDeadline != null) {
-                          timeLeft = state.moveDeadline! -
-                              DateTime.now().millisecondsSinceEpoch ~/ 1000;
-                          if (timeLeft < 0) timeLeft = 0;
-                        }
-                        return Column(
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Container(
+                  // color: AppColors.black.withOpacity(0.9),
+                ),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  child: Column(
+                    // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        height: _isThreeDice ?  0.7.sh : null,
+                        color: Colors.transparent,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
                           children: [
-                            if (turn != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Player $turn\'s Turn',
-                                  style: TextStyle(
-                                    color: _playerColors[turn] ?? Colors.white,
-                                  ),
+                            Builder(
+                              builder: (context) {
+                                final state = ref.watch(gameStateProvider(widget.gameId));
+                                _ensureColors(state.positions.keys, state.startOffsets);
+                                _ensureCorners(state.startOffsets);
+                                return EnhancedLudoBoardWidget(
+                                  positions: state.positions,
+                                  playerColors: _playerColors,
+                                  playerCorners: _playerCorner,
+                                  playerOrder: _playerOrder,
+                                  playerPoint: _playerPoint,
+                                  safeCells: _safeCells,
+                                  allowedMoves: state.allowedMoves,
+                                  onTokenTap: _onTokenTap,
+                                  onCapture: _handleCapture,
+                                  currentTurn: state.turn,
+                                  confettiController: _confettiController,
+                                  isThreeDice: _isThreeDice,
+                                  // particleController: _particleController,
+                                );
+                              },
+                            ),
+                            if (_isThreeDice)
+                              Positioned(
+                                top: 8.h,
+                                left: 0,
+                                right: 0,
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      "30",
+                                      style: AppTextStyles.poppinsBold.copyWith(
+                                        fontSize: 18.sp,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    Text(
+                                      "Move Left",
+                                      style: AppTextStyles.poppinsBold.copyWith(
+                                        fontSize: 18.sp,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            if (timeLeft != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Text(
-                                  '$timeLeft s',
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                              ),
+                            ..._buildAvatars(_playerCorner),
+                            // Positioned(
+                            //   top: 8,
+                            //   child: Builder(
+                            //     builder: (context) {
+                            //       final state =
+                            //           ref.watch(gameStateProvider(widget.gameId));
+                            //       final turn = state.turn;
+                            //       int? timeLeft;
+                            //       if (state.moveDeadline != null) {
+                            //         timeLeft = state.moveDeadline! -
+                            //             DateTime.now().millisecondsSinceEpoch ~/ 1000;
+                            //         if (timeLeft < 0) timeLeft = 0;
+                            //       }
+                            //       return Column(
+                            //         children: [
+                            //           if (turn != null)
+                            //             Container(
+                            //               padding: const EdgeInsets.symmetric(
+                            //                 horizontal: 8,
+                            //                 vertical: 4,
+                            //               ),
+                            //               decoration: BoxDecoration(
+                            //                 color: Colors.black54,
+                            //                 borderRadius: BorderRadius.circular(8),
+                            //               ),
+                            //               child: Text(
+                            //                 'Player $turn\'s Turn',
+                            //                 style: TextStyle(
+                            //                   color: _playerColors[turn] ?? Colors.white,
+                            //                 ),
+                            //               ),
+                            //             ),
+                            //           if (timeLeft != null)
+                            //             Padding(
+                            //               padding: const EdgeInsets.only(top: 4),
+                            //               child: Text(
+                            //                 '$timeLeft s',
+                            //                 style: const TextStyle(color: Colors.white),
+                            //               ),
+                            //             ),
+                            //         ],
+                            //       );
+                            //     },
+                            //   ),
+                            // ),
+                            // Positioned(
+                            //   top: 8,
+                            //   // right: 8,
+                            //   child: PlayerStatusPanel(
+                            //     positions: ref
+                            //         .watch(gameStateProvider(widget.gameId))
+                            //         .positions,
+                            //     playerColors: _playerColors,
+                            //     captures: _captureCounts,
+                            //   ),
+                            // ),
+                            ConfettiOverlay(controller: _confettiController),
+                            // ParticleOverlay(controller: _particleController),
                           ],
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                      if (_isThreeDice)
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildControls(),
+                              DiceWidget(
+                                rolling: _rolling,
+                                values: ref.watch(gameStateProvider(widget.gameId)).dice,
+                                selected: ref.watch(gameStateProvider(widget.gameId)).selectedDie,
+                                onSelected: (d) {
+                                  ref.read(gameStateProvider(widget.gameId).notifier).selectDie(d);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      // SingleChildScrollView(child: _buildControls()),
+                    ],
                   ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: PlayerStatusPanel(
-                      positions: ref
-                          .watch(gameStateProvider(widget.gameId))
-                          .positions,
-                      playerColors: _playerColors,
-                      captures: _captureCounts,
-                    ),
-                  ),
-                  ..._buildAvatars(_playerCorner),
-                  ConfettiOverlay(controller: _confettiController),
-                  // ParticleOverlay(controller: _particleController),
-                ],
-              ),
+                ),
+              ],
             ),
-            if(_isThreeDice)
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: DiceWidget(
-                rolling: _rolling,
-                values: ref.watch(gameStateProvider(widget.gameId)).dice,
-                selected: ref.watch(gameStateProvider(widget.gameId)).selectedDie,
-                onSelected: (d) {
-                  ref.read(gameStateProvider(widget.gameId).notifier).selectDie(d);
-                },
-              ),
-            ),
-            SingleChildScrollView(child: _buildControls()),
-          ],
-        ),
-        ),
+          ),
       ),
     );
   }
