@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:frontend/ludo_image_board/ludo_provider.dart';
 import 'package:frontend/providers/kyc_provider.dart';
 import 'package:frontend/providers/profile_provider.dart';
 import 'package:frontend/providers/quickplay_provider.dart';
@@ -290,6 +291,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => PublicSettingsProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => KycProvider()),
+        ChangeNotifierProvider(create: (_) => LudoProvider()),
       ],
       child: MyApp(router: router!),
 

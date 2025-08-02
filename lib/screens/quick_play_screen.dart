@@ -6,6 +6,7 @@ import 'package:frontend/app_images.dart';
 import 'package:frontend/common_widget/common_appbar.dart';
 import 'package:frontend/common_widget/common_toast.dart';
 import 'package:frontend/localized_errors.dart';
+import 'package:frontend/ludo_image_board/main_screen.dart';
 import 'package:frontend/providers/quickplay_provider.dart';
 import 'package:frontend/theme.dart';
 import 'package:frontend/constants.dart';
@@ -400,13 +401,18 @@ class _QuickPlayScreenState extends State<QuickPlayScreen> {
           final gameId = result.data?['game_id'];
           final matchId = result.data?['match_id'];
           if (gameId != null && matchId != null) {
-            context.read<GameProvider>().registerQuickPlay(gameId, id, matchId);
             if (mounted) {
-              context.push(
-                '/game/$gameId',
-                extra: data,
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) {
+                return MainScreen(gameId: gameId,gameData: data,);
+              },));
             }
+            // context.read<GameProvider>().registerQuickPlay(gameId, id, matchId);
+            // if (mounted) {
+            //   context.push(
+            //     '/game/$gameId',
+            //     extra: data,
+            //   );
+            // }
           } else {
             if (mounted) context.push('/queue?roomId=$id');
           }
@@ -462,7 +468,12 @@ class _QuickPlayScreenState extends State<QuickPlayScreen> {
         SizedBox(height: 8.h),
         if (context.watch<PublicSettingsProvider>().aiPlayEnabled)
           ElevatedButton.icon(
-            onPressed: () => _join(true),
+            onPressed: () {
+    Navigator.push(context, MaterialPageRoute(builder: (context) {
+    return MainScreen(gameId: 1,gameData: data,);
+    },));
+            },
+            // onPressed: () => _join(true),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 8.h),
             ),
