@@ -401,7 +401,12 @@ class _QuickPlayScreenState extends State<QuickPlayScreen> {
           final matchId = result.data?['match_id'];
           if (gameId != null && matchId != null) {
             context.read<GameProvider>().registerQuickPlay(gameId, id, matchId);
-            if (mounted) context.go('/game/$gameId');
+            if (mounted) {
+              context.push(
+                '/game/$gameId',
+                extra: data,
+              );
+            }
           } else {
             if (mounted) context.push('/queue?roomId=$id');
           }

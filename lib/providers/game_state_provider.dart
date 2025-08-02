@@ -18,6 +18,7 @@ class GameState {
   final Map<int, int> startOffsets;
   final Map<int, List<int>> homePaths;
   final Map<int, int> points;
+  final List<int> safeCells;
 
   const GameState({
     required this.positions,
@@ -32,6 +33,7 @@ class GameState {
     this.startOffsets = const {},
     this.homePaths = const {},
     this.points = const {},
+    this.safeCells = const [],
   });
 
   GameState copyWith({
@@ -46,6 +48,7 @@ class GameState {
     Map<int, int>? startOffsets,
     Map<int, List<int>>? homePaths,
     Map<int, int>? points,
+    List<int>? safeCells,
   }) {
     final newPositions = positions ?? this.positions;
     final newDice = dice ?? this.dice;
@@ -66,6 +69,7 @@ class GameState {
       startOffsets: startOffsets ?? this.startOffsets,
       homePaths: homePaths ?? this.homePaths,
       points: points ?? this.points,
+      safeCells: safeCells ?? this.safeCells,
       allowedMoves:
           _calcAllowedMoves(newPositions, newDice, newTurn, newSelected, points ?? this.points),
     );
@@ -83,7 +87,8 @@ class GameState {
       playerOrder: null,
       startOffsets: {},
       homePaths: {},
-      points: {});
+      points: {},
+     safeCells: []);
 
   static Map<int, Map<int, int>> _calcAllowedMoves(
       Map<int, List<int>> pos, List<int>? dice, int? turn, int? selectedDie,
@@ -233,6 +238,12 @@ class GameStateNotifier extends StateNotifier<GameState> {
         });
       }
 
+      final safeCells = <int>[];
+      final safeRaw = stateMap['safe_cells'];
+      if (safeRaw is List) {
+        safeCells.addAll(safeRaw.map((e) => int.tryParse(e.toString()) ?? 0));
+      }
+
       state = state.copyWith(
           positions: pos,
           turn: turn,
@@ -244,7 +255,8 @@ class GameStateNotifier extends StateNotifier<GameState> {
           playerOrder: order,
           startOffsets: startOffsets.isEmpty ? state.startOffsets : startOffsets,
           homePaths: homePaths.isEmpty ? state.homePaths : homePaths,
-          points: points.isEmpty ? state.points : points);
+          points: points.isEmpty ? state.points : points,
+          safeCells: safeCells,);
     } else if (parsed['type'] == 'roll') {
       final diceRaw = parsed['dice'];
       List<int>? dice;

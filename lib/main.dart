@@ -220,10 +220,17 @@ Future<void> main() async {
               ctx.read<AuthProvider>().isAuthenticated ? null : '/login'),
       GoRoute(
         path: '/game/:id',
-        builder: (c, s) =>
-            GameScreen(gameId: int.parse(s.pathParameters['id']!)),
-        redirect: (ctx, state) =>
-        ctx.read<AuthProvider>().isAuthenticated ? null : '/login',
+        builder: (context, state) {
+          final gameId = int.parse(state.pathParameters['id']!);
+          final gameData = state.extra as Map<String, dynamic>?;
+
+          return GameScreen(
+            gameId: gameId,
+            gameData: gameData,
+          );
+        },
+        redirect: (context, state) =>
+        context.read<AuthProvider>().isAuthenticated ? null : '/login',
       ),
       GoRoute(
         path: '/tournament/:id',
