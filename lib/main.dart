@@ -221,7 +221,8 @@ Future<void> main() async {
       GoRoute(
         path: '/game/:id',
         builder: (context, state) {
-          final gameId = int.parse(state.pathParameters['id']!);
+          final gameId = int.tryParse(state.pathParameters['id'] ?? '');
+          if (gameId == null) return const NotFoundScreen();
           final gameData = state.extra as Map<String, dynamic>?;
 
           return GameScreen(
@@ -234,15 +235,21 @@ Future<void> main() async {
       ),
       GoRoute(
         path: '/tournament/:id',
-        builder: (c, s) => TournamentOverviewScreen(
-            tournamentId: int.parse(s.pathParameters['id']!)),
+        builder: (c, s) {
+          final tournamentId = int.tryParse(s.pathParameters['id'] ?? '');
+          if (tournamentId == null) return const NotFoundScreen();
+          return TournamentOverviewScreen(tournamentId: tournamentId);
+        },
         redirect: (ctx, state) =>
             ctx.read<AuthProvider>().isAuthenticated ? null : '/login',
       ),
       GoRoute(
         path: '/tournament/:id/leaderboard',
-        builder: (c, s) => LeaderboardScreen(
-            tournamentId: int.parse(s.pathParameters['id']!)),
+        builder: (c, s) {
+          final tournamentId = int.tryParse(s.pathParameters['id'] ?? '');
+          if (tournamentId == null) return const NotFoundScreen();
+          return LeaderboardScreen(tournamentId: tournamentId);
+        },
         redirect: (ctx, state) =>
         ctx.read<AuthProvider>().isAuthenticated ? null : '/login',
       ),
