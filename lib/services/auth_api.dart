@@ -40,7 +40,7 @@ class AuthApi {
   Future<ApiResult<String?>> sendOtp(String phone) async {
     try {
       final resp = await http
-          .post(Uri.parse('$baseUrl/auth/signup'),
+          .post(Uri.parse('$baseUrl/auth/send-otp'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({'phone_number': phone}))
           .timeout(const Duration(seconds: 5));
@@ -188,7 +188,7 @@ class AuthApi {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-      );
+      ).timeout(const Duration(seconds: 5));
 
       if (resp.statusCode == 200) {
         return ApiResult.success(
