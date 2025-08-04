@@ -127,7 +127,7 @@ class GameStateNotifier extends StateNotifier<GameState> {
     final token = await AppPreferences().getToken();
     if (!mounted) return;
     log('🟢 Connecting to game $gameId with token: $token');
-    socket.connect(gameId, token: token.isEmpty ? null : token);
+    socket.connect(gameId,token);
     if (!mounted) return;
 
     _sub = socket.stream.listen(

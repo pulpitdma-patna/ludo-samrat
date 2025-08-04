@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:frontend/ludo_image_board/constants.dart';
 import 'package:frontend/ludo_image_board/ludo_provider.dart';
 import 'package:frontend/ludo_image_board/widgets/pawn_widget.dart';
-import 'package:provider/provider.dart';
 
 import '../ludo_player.dart';
 
 ///Widget for the board
-class ImageBoardWidget extends StatelessWidget {
-  const ImageBoardWidget({super.key});
+
+class ImageBoardWidget extends ConsumerStatefulWidget {
+  final int gameId;
+  const ImageBoardWidget({super.key,required this.gameId});
+
+  @override
+  ConsumerState createState() => _ImageBoardWidgetState();
+}
+
+class _ImageBoardWidgetState extends ConsumerState<ImageBoardWidget> {
 
   ///Return board size
   double ludoBoard(BuildContext context) {
@@ -31,6 +39,7 @@ class ImageBoardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     return Container(
       margin: const EdgeInsets.all(10),
       clipBehavior: Clip.antiAlias,
@@ -44,18 +53,24 @@ class ImageBoardWidget extends StatelessWidget {
           alignment: Alignment.topCenter,
         ),
       ),
-      child: Consumer<LudoProvider>(
-        builder: (context, value, child) {
+
+      child: Consumer(
+        builder: (context, ref, child) {
+          final notificationsState = ref.watch(ludoStateNotifier(widget.gameId));
+          controller() => ref.read(ludoStateNotifier(widget.gameId).notifier);
+
           //We use `Stack` to put all widgets on top of each other
           //so we make some logic to change the order of players to make sure
           //the player on top is the one who is playing
-          List<LudoPlayer> players = List.from(value.players);
+          List<LudoPlayer> players = List.from(controller().players);
           Map<String, List<PawnWidget>> pawnsRaw = {};
           Map<String, List<String>> pawnsToPrint = {};
           List<Widget> playersPawn = [];
 
+
           //Sort players by current turn to make sure the player on top is the one who is playing
-          players.sort((a, b) => value.currentPlayer.type == a.type ? 1 : -1);
+          players.sort((a, b) => controller().currentPlayer.type == a.type ? 1 : -1);
+
 
           ///Loop through all players and add their pawns to the map
           for (int i = 0; i < players.length; i++) {
@@ -89,7 +104,7 @@ class ImageBoardWidget extends StatelessWidget {
             if (key == "home") {
               playersPawn.addAll(
                 pawnsValue.map((e) {
-                  var player = value.players.firstWhere((element) => element.type == e.type);
+                  var player = controller().players.firstWhere((element) => element.type == e.type);
                   return AnimatedPositioned(
                     key: ValueKey("${e.type.name}_${e.index}"),
                     left: LudoPath.stepBox(ludoBoard(context), player.homePath[e.index][0]),
@@ -122,7 +137,7 @@ class ImageBoardWidget extends StatelessWidget {
                 playersPawn.addAll(
                   List.generate(
                     pawnsValue.length,
-                    (index) {
+                        (index) {
                       var e = pawnsValue[index];
                       return AnimatedPositioned(
                         key: ValueKey("${e.type.name}_${e.index}"),
@@ -139,20 +154,30 @@ class ImageBoardWidget extends StatelessWidget {
               }
             }
           }
-
           return Center(
             child: Stack(
               fit: StackFit.expand,
               alignment: Alignment.center,
               children: [
                 ...playersPawn,
-                ...winners(context, value.winners),
-                turnIndicator(context, value.currentPlayer.type, value.currentPlayer.color, value.gameState),
+                ...winners(context, controller().winners),
+                // turnIndicator(context, controller().currentPlayer.type, controller().currentPlayer.color, controller().gameState),
               ],
             ),
           );
         },
       ),
+      // child: Center(
+      //   child: Stack(
+      //     fit: StackFit.expand,
+      //     alignment: Alignment.center,
+      //     children: [
+      //       ...playersPawn,
+      //       ...winners(context, controller().winners),
+      //       turnIndicator(context, controller().currentPlayer.type, controller().currentPlayer.color, controller().gameState),
+      //     ],
+      //   ),
+      // ),
     );
   }
 
@@ -224,59 +249,60 @@ class ImageBoardWidget extends StatelessWidget {
 
   ///This is for the winner widget
   List<Widget> winners(BuildContext context, List<LudoPlayerType> winners) => List.generate(
-        winners.length,
+    winners.length,
         (index) {
-          Widget crownImage = Image.asset("assets/games/ludo/crown/1st.png");
+      Widget crownImage = Image.asset("assets/games/ludo/crown/1st.png");
 
-          //0 is left, 1 is right
-          int x = 0;
-          //0 is top, 1 is bottom
-          int y = 0;
+      //0 is left, 1 is right
+      int x = 0;
+      //0 is top, 1 is bottom
+      int y = 0;
 
-          if (index == 0) {
-            crownImage = Image.asset("assets/images/crown/1st.png", fit: BoxFit.cover);
-          } else if (index == 1) {
-            crownImage = Image.asset("assets/images/crown/2nd.png", fit: BoxFit.cover);
-          } else if (index == 2) {
-            crownImage = Image.asset("assets/images/crown/3rd.png", fit: BoxFit.cover);
-          } else {
-            return Container();
-          }
+      if (index == 0) {
+        crownImage = Image.asset("assets/images/crown/1st.png", fit: BoxFit.cover);
+      } else if (index == 1) {
+        crownImage = Image.asset("assets/images/crown/2nd.png", fit: BoxFit.cover);
+      } else if (index == 2) {
+        crownImage = Image.asset("assets/images/crown/3rd.png", fit: BoxFit.cover);
+      } else {
+        return Container();
+      }
 
-          switch (winners[index]) {
-            case LudoPlayerType.green:
-              x = 0;
-              y = 0;
-              break;
-            case LudoPlayerType.yellow:
-              x = 1;
-              y = 0;
-              break;
-            case LudoPlayerType.blue:
-              x = 1;
-              y = 1;
-              break;
-            case LudoPlayerType.red:
-              x = 0;
-              y = 1;
-              break;
-          }
-          return Positioned(
-            top: y == 0 ? 0 : null,
-            left: x == 0 ? 0 : null,
-            right: x == 1 ? 0 : null,
-            bottom: y == 1 ? 0 : null,
-            width: ludoBoard(context) * .4,
-            height: ludoBoard(context) * .4,
-            child: Padding(
-              padding: EdgeInsets.all(boxStepSize(context)),
-              child: Container(
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(15)),
-                child: crownImage,
-              ),
-            ),
-          );
-        },
+      switch (winners[index]) {
+        case LudoPlayerType.green:
+          x = 0;
+          y = 0;
+          break;
+        case LudoPlayerType.yellow:
+          x = 1;
+          y = 0;
+          break;
+        case LudoPlayerType.blue:
+          x = 1;
+          y = 1;
+          break;
+        case LudoPlayerType.red:
+          x = 0;
+          y = 1;
+          break;
+      }
+      return Positioned(
+        top: y == 0 ? 0 : null,
+        left: x == 0 ? 0 : null,
+        right: x == 1 ? 0 : null,
+        bottom: y == 1 ? 0 : null,
+        width: ludoBoard(context) * .4,
+        height: ludoBoard(context) * .4,
+        child: Padding(
+          padding: EdgeInsets.all(boxStepSize(context)),
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(15)),
+            child: crownImage,
+          ),
+        ),
       );
+    },
+  );
+
 }

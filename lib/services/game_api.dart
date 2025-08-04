@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:flutter/material.dart';
 import 'package:frontend/services/app_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../config.dart';
@@ -166,6 +167,10 @@ class GameApi {
   Future<ApiResult<Map<String, dynamic>>> endRoom(
       int roomId, int matchId, int winnerId) async {
     try {
+      debugPrint("Called Room End API");
+      debugPrint("roomId =-= ${roomId}");
+      debugPrint("matchId =-= ${matchId}");
+      debugPrint("winnerId =-= ${winnerId}");
       final token = await AppPreferences().getToken();
       if (token == "") return ApiResult.failure('Not authenticated', '401');
       final resp = await http
@@ -174,8 +179,11 @@ class GameApi {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer $token',
               },
-              body: jsonEncode({'winner_id': winnerId, 'match_id': matchId}))
-          .timeout(const Duration(seconds: 5));
+              body: jsonEncode({'winner_id': winnerId, 'match_id': matchId}));
+
+      debugPrint("Room End API Response ${resp.body}");
+
+          // .timeout(const Duration(seconds: 5));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         if (resp.body.isEmpty) return ApiResult.success(<String, dynamic>{});
         return ApiResult.success(

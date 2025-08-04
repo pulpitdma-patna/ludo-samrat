@@ -1,6 +1,7 @@
 const String apiUrl =
 String.fromEnvironment('API_URL', defaultValue: 'https://ludosamrat.com/api');
 
+const String socketBaseUrl = 'wss://ludosamrat.com/';
 /// Razorpay key for processing payments.
 ///
 /// Set using `--dart-define=RAZORPAY_KEY=<key>` when running the app or

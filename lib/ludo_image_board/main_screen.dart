@@ -1,6 +1,6 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:frontend/common_widget/app_scaffold.dart';
 import 'package:frontend/common_widget/common_appbar.dart';
@@ -9,35 +9,31 @@ import 'package:frontend/ludo_image_board/ludo_provider.dart';
 import 'package:frontend/ludo_image_board/widgets/board_widget.dart';
 import 'package:frontend/ludo_image_board/widgets/dice_widget.dart';
 import 'package:frontend/providers/game_provider.dart';
-import 'package:frontend/providers/game_state_provider.dart';
 import 'package:frontend/services/analytics_service.dart';
 import 'package:frontend/services/app_preferences.dart';
 import 'package:frontend/services/quickplay_api.dart';
 import 'package:frontend/theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-
-import '../screens/board_widget.dart';
 import '../widgets/app_drawer.dart';
 
-class MainScreen extends StatefulWidget {
+
+class MainScreen extends ConsumerStatefulWidget {
   final int gameId;
   final Map<String, dynamic>? gameData;
-  const MainScreen({super.key, required this.gameId,this.gameData});
+  const MainScreen({super.key,required this.gameId,this.gameData});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState createState() => _MainScreen2State();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  @override
-  void initState() {
-    context.read<LudoProvider>().startGame();
-    super.initState();
-  }
+class _MainScreen2State extends ConsumerState<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    final state = ref.watch(ludoStateNotifier(widget.gameId));
+
     return AppScaffold(
       backgroundGradient: AppGradients.blueHorizontal,
       drawer: const AppDrawer(),
@@ -80,36 +76,16 @@ class _MainScreenState extends State<MainScreen> {
       body: Stack(
         alignment: Alignment.center,
         children: [
-           Column(
+          Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              ImageBoardWidget(),
-              Center(child: SizedBox(width: 50, height: 50, child: ImageDiceWidget())),
+              ImageBoardWidget(gameId: widget.gameId,),
+              // Center(child: SizedBox(width: 50, height: 50, child: ImageDiceWidget(gameId: widget.gameId,))),
             ],
           ),
-          Consumer<LudoProvider>(
-            builder: (context, value, child) => value.winners.length == 3
-                ? Container(
-                    color: Colors.black.withOpacity(0.8),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset("assets/images/thankyou.gif"),
-                          const Text("Thank you for playing 😙", style: TextStyle(color: Colors.white, fontSize: 20), textAlign: TextAlign.center),
-                          Text("The Winners is: ${value.winners.map((e) => e.name.toUpperCase()).join(", ")}", style: const TextStyle(color: Colors.white, fontSize: 30), textAlign: TextAlign.center),
-                          const Divider(color: Colors.white),
-                          const Text("This game made with Flutter ❤️ by Mochamad Nizwar Syafuan", style: TextStyle(color: Colors.white, fontSize: 15), textAlign: TextAlign.center),
-                          const SizedBox(height: 20),
-                          const Text("Refresh your browser to play again", style: TextStyle(color: Colors.white, fontSize: 10), textAlign: TextAlign.center),
-                        ],
-                      ),
-                    ),
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
+          _winner(state),
+    ],
       ),
     );
   }
@@ -198,5 +174,47 @@ class _MainScreenState extends State<MainScreen> {
 
     return false;
   }
+
+  Widget _winner(LudoState state) {
+    if (state.winners.length == 3) {
+      return Container(
+        color: Colors.black.withOpacity(0.8),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset("assets/images/thankyou.gif"),
+              const Text(
+                "Thank you for playing 😙",
+                style: TextStyle(color: Colors.white, fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+              Text(
+                "The Winners is: ${state.winners.map((e) => e.name.toUpperCase()).join(", ")}",
+                style: const TextStyle(color: Colors.white, fontSize: 30),
+                textAlign: TextAlign.center,
+              ),
+              const Divider(color: Colors.white),
+              const Text(
+                "This game made with Flutter ❤️ by Mochamad Nizwar Syafuan",
+                style: TextStyle(color: Colors.white, fontSize: 15),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "Refresh your browser to play again",
+                style: TextStyle(color: Colors.white, fontSize: 10),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      return const SizedBox.shrink();
+    }
+  }
+
+
 
 }

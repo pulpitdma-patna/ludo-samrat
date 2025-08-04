@@ -291,7 +291,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => PublicSettingsProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
         ChangeNotifierProvider(create: (_) => KycProvider()),
-        ChangeNotifierProvider(create: (_) => LudoProvider()),
+        // ChangeNotifierProvider(create: (_) => LudoStateNotifier()),
       ],
       child: MyApp(router: router!),
 

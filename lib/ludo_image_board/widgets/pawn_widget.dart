@@ -44,7 +44,7 @@ class PawnWidget extends StatelessWidget {
               ripplesCount: 3,
               child: const SizedBox.shrink(),
             ),
-          Consumer<LudoProvider>(
+          Consumer<LudoStateNotifier>(
             builder: (context, provider, child) => GestureDetector(
               onTap: () {
                 if (step == -1) {
@@ -52,7 +52,7 @@ class PawnWidget extends StatelessWidget {
                 } else {
                   provider.move(type, index, (step + 1) + provider.diceResult);
                 }
-                context.read<LudoProvider>().move(type, index, step);
+                context.read<LudoStateNotifier>().move(type, index, step);
               },
               child: Container(
                 decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 2)),
