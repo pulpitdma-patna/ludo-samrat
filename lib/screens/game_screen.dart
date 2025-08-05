@@ -647,7 +647,7 @@ class _GameScreenState extends ConsumerState<GameScreen>
             await context.read<GameProvider>().endQuickPlay(
               roomId,
               matchId,
-              winner,
+              myId,
               context,
             );
           }

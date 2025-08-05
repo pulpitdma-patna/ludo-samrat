@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/common_widget/app_scaffold.dart';
+import 'package:frontend/ludo_image_board/main_screen.dart';
 import 'package:frontend/screens/quick_play_screen.dart';
 
 import 'bottom_nav_bar.dart';
@@ -50,6 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _screens = widget.screens ?? [
       const HomeScreen(),
       const QuickPlayScreen(),
+      // MainScreen(gameId: 1,gameData: {},),
       const TournamentListScreen(),
       const WalletScreen(),
       ProfileScreen(),

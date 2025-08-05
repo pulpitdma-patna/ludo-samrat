@@ -1,0 +1,377 @@
+import 'dart:async';
+
+import 'package:frontend/ludo_image_board/ludo_player.dart';
+import '../services/socket_service.dart';
+import 'constants.dart';
+import 'dart:math';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'audio.dart';
+
+
+class LudoState {
+  final bool isMoving;
+  final bool stopMoving;
+  final LudoGameState gameState;
+  final LudoPlayerType currentTurn;
+  final int diceResult;
+  final bool diceStarted;
+  final List<LudoPlayer> players;
+  final List<LudoPlayerType> winners;
+
+  LudoState({
+    required this.isMoving,
+    required this.stopMoving,
+    required this.gameState,
+    required this.currentTurn,
+    required this.diceResult,
+    required this.diceStarted,
+    required this.players,
+    required this.winners,
+  });
+
+  factory LudoState.initial() => LudoState(
+    isMoving: false,
+    stopMoving: false,
+    gameState: LudoGameState.throwDice,
+    currentTurn: LudoPlayerType.green,
+    diceResult: 0,
+    diceStarted: false,
+    players: [],
+    winners: [],
+  );
+
+  LudoState copyWith({
+    bool? isMoving,
+    bool? stopMoving,
+    LudoGameState? gameState,
+    LudoPlayerType? currentTurn,
+    int? diceResult,
+    bool? diceStarted,
+    List<LudoPlayer>? players,
+    List<LudoPlayerType>? winners,
+  }) {
+    return LudoState(
+      isMoving: isMoving ?? this.isMoving,
+      stopMoving: stopMoving ?? this.stopMoving,
+      gameState: gameState ?? this.gameState,
+      currentTurn: currentTurn ?? this.currentTurn,
+      diceResult: diceResult ?? this.diceResult,
+      diceStarted: diceStarted ?? this.diceStarted,
+      players: players ?? this.players,
+      winners: winners ?? this.winners,
+    );
+  }
+
+}
+
+class LudoStateNotifier extends StateNotifier<LudoState> {
+  final SocketService socket;
+  StreamSubscription? _sub;
+
+  LudoStateNotifier({SocketService? socketService})
+      : socket = socketService ?? SocketService(),
+        super(LudoState.initial());
+
+  ///Flags to check if pawn is moving
+  bool get _isMoving => state.isMoving;
+
+  ///Flags to stop pawn once disposed
+  bool get _stopMoving => state.stopMoving;
+
+  ///Game state to check if the game is in throw dice state or pick pawn state
+  LudoGameState get gameState => state.gameState;
+
+  LudoPlayerType get _currentTurn => state.currentTurn;
+
+  int get _diceResult => state.diceResult;
+
+  ///Dice result to check the dice result of the current turn
+  int get diceResult {
+    if (_diceResult < 1) {
+      return 1;
+    } else {
+      if (_diceResult > 6) {
+        return 6;
+      } else {
+        return _diceResult;
+      }
+    }
+  }
+
+  bool get _diceStarted => state.diceStarted;
+
+  LudoPlayer get currentPlayer =>
+      state.players.firstWhere((element) => element.type == _currentTurn);
+
+  ///Fill all players
+  List<LudoPlayer> get players => state.players;
+
+  ///Player win, we use `LudoPlayerType` to make it easier to check
+  List<LudoPlayerType> get winners => state.winners;
+
+  LudoPlayer player(LudoPlayerType type) =>
+      players.firstWhere((element) => element.type == type);
+
+
+  ///This method will check if the pawn can kill another pawn or not by checking the step of the pawn
+  bool checkToKill(
+      LudoPlayerType type, int index, int step, List<List<double>> path) {
+    bool killSomeone = false;
+    for (int i = 0; i < 4; i++) {
+      var greenElement = player(LudoPlayerType.green).pawns[i];
+      var blueElement = player(LudoPlayerType.blue).pawns[i];
+      var redElement = player(LudoPlayerType.red).pawns[i];
+      var yellowElement = player(LudoPlayerType.yellow).pawns[i];
+
+      if ((greenElement.step > -1 &&
+          !LudoPath.safeArea
+              .map((e) => e.toString())
+              .contains(player(LudoPlayerType.green)
+              .path[greenElement.step]
+              .toString())) &&
+          type != LudoPlayerType.green) {
+        if (player(LudoPlayerType.green)
+            .path[greenElement.step]
+            .toString() ==
+            path[step - 1].toString()) {
+          killSomeone = true;
+          player(LudoPlayerType.green).movePawn(i, -1);
+        }
+      }
+      if ((yellowElement.step > -1 &&
+          !LudoPath.safeArea
+              .map((e) => e.toString())
+              .contains(player(LudoPlayerType.yellow)
+              .path[yellowElement.step]
+              .toString())) &&
+          type != LudoPlayerType.yellow) {
+        if (player(LudoPlayerType.yellow)
+            .path[yellowElement.step]
+            .toString() ==
+            path[step - 1].toString()) {
+          killSomeone = true;
+          player(LudoPlayerType.yellow).movePawn(i, -1);
+        }
+      }
+      if ((blueElement.step > -1 &&
+          !LudoPath.safeArea
+              .map((e) => e.toString())
+              .contains(player(LudoPlayerType.blue)
+              .path[blueElement.step]
+              .toString())) &&
+          type != LudoPlayerType.blue) {
+        if (player(LudoPlayerType.blue)
+            .path[blueElement.step]
+            .toString() ==
+            path[step - 1].toString()) {
+          killSomeone = true;
+          player(LudoPlayerType.blue).movePawn(i, -1);
+        }
+      }
+      if ((redElement.step > -1 &&
+          !LudoPath.safeArea
+              .map((e) => e.toString())
+              .contains(player(LudoPlayerType.red)
+              .path[redElement.step]
+              .toString())) &&
+          type != LudoPlayerType.red) {
+        if (player(LudoPlayerType.red)
+            .path[redElement.step]
+            .toString() ==
+            path[step - 1].toString()) {
+          killSomeone = true;
+          player(LudoPlayerType.red).movePawn(i, -1);
+        }
+      }
+    }
+
+    if (killSomeone) {
+      state = state.copyWith();
+    }
+
+    return killSomeone;
+  }
+
+  ///This is the function that will be called to throw the dice
+  void throwDice() async {
+    if (gameState != LudoGameState.throwDice) return;
+    state = state.copyWith(diceStarted: true);
+    Audio.rollDice();
+
+    if (winners.contains(currentPlayer.type)) {
+      nextTurn();
+      return;
+    }
+
+    currentPlayer.highlightAllPawns(false);
+
+    Future.delayed(const Duration(seconds: 1)).then((value) {
+      var random = Random();
+      int result = random.nextBool() ? 6 : random.nextInt(6) + 1;
+      state = state.copyWith(
+        diceStarted: false,
+        diceResult: result,
+      );
+
+      if (diceResult == 6) {
+        currentPlayer.highlightAllPawns();
+        state = state.copyWith(gameState: LudoGameState.pickPawn);
+      } else {
+        if (currentPlayer.pawnInsideCount == 4) {
+          nextTurn();
+          return;
+        } else {
+          currentPlayer.highlightOutside();
+          state = state.copyWith(gameState: LudoGameState.pickPawn);
+        }
+      }
+
+      for (var i = 0; i < currentPlayer.pawns.length; i++) {
+        var pawn = currentPlayer.pawns[i];
+        if ((pawn.step + diceResult) > currentPlayer.path.length - 1) {
+          currentPlayer.highlightPawn(i, false);
+        }
+      }
+
+      var moveablePawn =
+      currentPlayer.pawns.where((e) => e.highlight).toList();
+      if (moveablePawn.length > 1) {
+        var biggestStep = moveablePawn.map((e) => e.step).reduce(max);
+        if (moveablePawn.every((element) => element.step == biggestStep)) {
+          var random = 1 + Random().nextInt(moveablePawn.length - 1);
+          var thePawn = moveablePawn[random];
+          if (thePawn.step == -1) {
+            move(thePawn.type, thePawn.index, (thePawn.step + 1) + 1);
+            return;
+          } else {
+            move(thePawn.type, thePawn.index,
+                (thePawn.step + 1) + diceResult);
+            return;
+          }
+        }
+      }
+
+      if (currentPlayer.pawns.every((element) => !element.highlight)) {
+        if (diceResult == 6) {
+          state = state.copyWith(gameState: LudoGameState.throwDice);
+        } else {
+          nextTurn();
+          return;
+        }
+      }
+
+      if (currentPlayer.pawns.where((element) => element.highlight).length ==
+          1) {
+        var index = currentPlayer.pawns
+            .indexWhere((element) => element.highlight);
+        move(currentPlayer.type, index,
+            (currentPlayer.pawns[index].step + 1) + diceResult);
+      }
+    });
+  }
+
+  ///Move pawn to next step and check if it can kill other pawn
+  void move(LudoPlayerType type, int index, int step) async {
+    if (_isMoving) return;
+    state = state.copyWith(
+        isMoving: true, gameState: LudoGameState.moving);
+    currentPlayer.highlightAllPawns(false);
+
+    var selectedPlayer = player(type);
+    for (int i = selectedPlayer.pawns[index].step; i < step; i++) {
+      if (_stopMoving) break;
+      if (selectedPlayer.pawns[index].step == i) continue;
+      selectedPlayer.movePawn(index, i);
+      await Audio.playMove();
+      state = state.copyWith();
+      if (_stopMoving) break;
+    }
+
+    if (checkToKill(type, index, step, selectedPlayer.path)) {
+      Audio.playKill();
+      state = state.copyWith(
+        gameState: LudoGameState.throwDice,
+        isMoving: false,
+      );
+      return;
+    }
+
+    validateWin(type);
+
+    if (diceResult == 6) {
+      state = state.copyWith(gameState: LudoGameState.throwDice);
+    } else {
+      nextTurn();
+    }
+
+    state = state.copyWith(isMoving: false);
+  }
+
+  ///Next turn will be called when the player finish the turn
+  void nextTurn() {
+    LudoPlayerType nextTurn;
+    switch (_currentTurn) {
+      case LudoPlayerType.green:
+        nextTurn = LudoPlayerType.yellow;
+        break;
+      case LudoPlayerType.yellow:
+        nextTurn = LudoPlayerType.blue;
+        break;
+      case LudoPlayerType.blue:
+        nextTurn = LudoPlayerType.red;
+        break;
+      case LudoPlayerType.red:
+        nextTurn = LudoPlayerType.green;
+        break;
+    }
+
+    if (winners.contains(nextTurn)) {
+      state = state.copyWith(currentTurn: nextTurn);
+      nextTurn;
+      return;
+    }
+
+    state = state.copyWith(
+      currentTurn: nextTurn,
+      gameState: LudoGameState.throwDice,
+    );
+  }
+
+  ///This function will check if the pawn finish the game or not
+  void validateWin(LudoPlayerType color) {
+    if (winners.map((e) => e.name).contains(color.name)) return;
+    if (player(color)
+        .pawns
+        .map((e) => e.step)
+        .every((element) => element == player(color).path.length - 1)) {
+      state = state.copyWith(winners: [...winners, color]);
+    }
+
+    if (state.winners.length == 3) {
+      state = state.copyWith(gameState: LudoGameState.finish);
+    }
+  }
+
+  void startGame() {
+    state = state.copyWith(
+      winners: [],
+      players: [
+        LudoPlayer(LudoPlayerType.green),
+        LudoPlayer(LudoPlayerType.yellow),
+        LudoPlayer(LudoPlayerType.blue),
+        LudoPlayer(LudoPlayerType.red),
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+}
+
+final ludoStateNotifier =
+StateNotifierProvider.family<LudoStateNotifier, LudoState, int>((ref, id) {
+  final notifier = LudoStateNotifier();
+  return notifier;
+});

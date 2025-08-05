@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:frontend/services/app_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -26,12 +27,22 @@ class QuickPlayApi extends GameApi {
       var uri = Uri.parse('$baseUrl/quickplay/');
       uri = uri.replace(queryParameters: params.isEmpty ? null : params);
 
+      debugPrint("QuickPlay API $uri");
+      debugPrint("Token $token");
+
       final resp = await http
           .get(uri, headers: {'Authorization': 'Bearer $token'})
           .timeout(const Duration(seconds: 5));
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         if (resp.body.isEmpty) return ApiResult.success(<dynamic>[]);
-        return ApiResult.success(jsonDecode(resp.body) as List<dynamic>);
+        var jsonBody = jsonDecode(resp.body);
+        List data = [];
+        if(jsonBody is Map && jsonBody['items'] != null && jsonBody['items'] is List ){
+          data = jsonBody['items'];
+        }else if(jsonBody is List){
+          data = jsonBody;
+        }
+        return ApiResult.success(data);
       }
       final err = _parseError(resp);
       return ApiResult.failure(err['message']!, err['code']);

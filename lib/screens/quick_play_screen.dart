@@ -468,11 +468,11 @@ class _QuickPlayScreenState extends State<QuickPlayScreen> {
         SizedBox(height: 8.h),
         if (context.watch<PublicSettingsProvider>().aiPlayEnabled)
           ElevatedButton.icon(
-    //         onPressed: () {
-    // Navigator.push(context, MaterialPageRoute(builder: (context) {
-    // return MainScreen(gameId: 1,gameData: data,);
-    // },));
-    //         },
+            // onPressed: () {
+            //    Navigator.push(context, MaterialPageRoute(builder: (context) {
+            //    return MainScreen(gameId: 1,gameData: data,);
+            //     },));
+            // },
             onPressed: () => _join(true),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(vertical: 8.h),
