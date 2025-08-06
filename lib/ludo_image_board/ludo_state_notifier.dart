@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:frontend/ludo_image_board/ludo_player.dart';
+import 'package:frontend/services/app_preferences.dart';
 import '../services/socket_service.dart';
 import 'constants.dart';
 import 'dart:math';
@@ -18,6 +21,20 @@ class LudoState {
   final List<LudoPlayer> players;
   final List<LudoPlayerType> winners;
 
+  final Map<int, List<int>> positions;
+  final Map<int, Map<int, int>> allowedMoves;
+  final List<int>? dice;
+  final int? selectedDie;
+  final int? turn;
+  final int? moveDeadline;
+  final int? elapsedTime;
+  final int? timeLimit;
+  final List<int>? playerOrder;
+  final Map<int, int> startOffsets;
+  final Map<int, List<int>> homePaths;
+  final Map<int, int> points;
+  final List<int> safeCells;
+
   LudoState({
     required this.isMoving,
     required this.stopMoving,
@@ -27,6 +44,20 @@ class LudoState {
     required this.diceStarted,
     required this.players,
     required this.winners,
+
+    required this.positions,
+    required this.allowedMoves,
+    this.dice,
+    this.selectedDie,
+    this.turn,
+    this.moveDeadline,
+    this.elapsedTime,
+    this.timeLimit,
+    this.playerOrder,
+    this.startOffsets = const {},
+    this.homePaths = const {},
+    this.points = const {},
+    this.safeCells = const [],
   });
 
   factory LudoState.initial() => LudoState(
@@ -38,6 +69,21 @@ class LudoState {
     diceStarted: false,
     players: [],
     winners: [],
+
+      positions: {},
+      allowedMoves: {},
+      dice: null,
+      selectedDie: null,
+      turn: null,
+      moveDeadline: null,
+      elapsedTime: null,
+      timeLimit: null,
+      playerOrder: null,
+      startOffsets: {},
+      homePaths: {},
+      points: {},
+      safeCells: []
+
   );
 
   LudoState copyWith({
@@ -49,7 +95,30 @@ class LudoState {
     bool? diceStarted,
     List<LudoPlayer>? players,
     List<LudoPlayerType>? winners,
+
+    Map<int, List<int>>? positions,
+    List<int>? dice,
+    int? selectedDie,
+    int? turn,
+    int? moveDeadline,
+    int? elapsedTime,
+    int? timeLimit,
+    List<int>? playerOrder,
+    Map<int, int>? startOffsets,
+    Map<int, List<int>>? homePaths,
+    Map<int, int>? points,
+    List<int>? safeCells,
+
   }) {
+
+    final newPositions = positions ?? this.positions;
+    final newDice = dice ?? this.dice;
+    final newSelected = selectedDie ?? this.selectedDie;
+    final newTurn = turn ?? this.turn;
+    final newDeadline = moveDeadline ?? this.moveDeadline;
+    final newElapsed = elapsedTime ?? this.elapsedTime;
+    final newLimit = timeLimit ?? this.timeLimit;
+
     return LudoState(
       isMoving: isMoving ?? this.isMoving,
       stopMoving: stopMoving ?? this.stopMoving,
@@ -59,7 +128,47 @@ class LudoState {
       diceStarted: diceStarted ?? this.diceStarted,
       players: players ?? this.players,
       winners: winners ?? this.winners,
+
+      positions: newPositions,
+      dice: newDice,
+      selectedDie: newSelected,
+      turn: newTurn,
+      moveDeadline: newDeadline,
+      elapsedTime: newElapsed,
+      timeLimit: newLimit,
+      playerOrder: playerOrder ?? this.playerOrder,
+      startOffsets: startOffsets ?? this.startOffsets,
+      homePaths: homePaths ?? this.homePaths,
+      points: points ?? this.points,
+      safeCells: safeCells ?? this.safeCells,
+      allowedMoves:
+      _calcAllowedMoves(newPositions, newDice, newTurn, newSelected, points ?? this.points),
+
     );
+  }
+
+  static Map<int, Map<int, int>> _calcAllowedMoves(
+      Map<int, List<int>> pos, List<int>? dice, int? turn, int? selectedDie,
+      [Map<int, int>? points]) {
+    final result = <int, Map<int, int>>{};
+    if (dice != null && dice.isNotEmpty && turn != null) {
+      final tokens = pos[turn];
+      if (tokens != null) {
+        final moves = <int, int>{};
+        for (var i = 0; i < tokens.length; i++) {
+          final dices = selectedDie != null ? [selectedDie] : dice;
+          for (final d in dices) {
+            final dest = tokens[i] + d;
+            if (dest < 225) {
+              moves[i] = dest;
+              break;
+            }
+          }
+        }
+        result[turn] = moves;
+      }
+    }
+    return result;
   }
 
 }
@@ -71,6 +180,180 @@ class LudoStateNotifier extends StateNotifier<LudoState> {
   LudoStateNotifier({SocketService? socketService})
       : socket = socketService ?? SocketService(),
         super(LudoState.initial());
+
+
+  Future<void> connect(String gameId) async {
+    final token = await AppPreferences().getToken();
+    if (!mounted) return;
+    debugPrint('🟢 Connecting to game $gameId with token: $token');
+    socket.connect(gameId,token);
+    if (!mounted) return;
+
+    _sub = socket.stream.listen(
+      _handleMessage,
+      onError: (err) => debugPrint('❌ WebSocket stream error: $err'),
+      onDone: () => debugPrint('🔴 WebSocket connection closed.'),
+    );
+  }
+
+  void _handleMessage(dynamic data) {
+    if (!mounted) return;
+    debugPrint('📩 Received socket data: $data');
+    final parsed = data is String ? jsonDecode(data) : data;
+
+    if (parsed['type'] == 'state') {
+      final stateMap = parsed['state'] as Map;
+      final pos = <int, List<int>>{};
+
+      (stateMap['positions'] as Map).forEach((k, v) {
+        final playerId = int.tryParse(k.toString());
+        if (playerId != null) {
+          pos[playerId] = List<int>.from((v as List).map((e) => e as int));
+        }
+      });
+
+      final turn = stateMap['turn'] is int ? stateMap['turn'] as int : null;
+      final diceRaw = stateMap['dice'];
+      List<int>? dice;
+      if (diceRaw is int) {
+        dice = [diceRaw];
+      } else if (diceRaw is List) {
+        dice = List<int>.from(diceRaw.map((e) => e as int));
+      }
+      final moveDeadline = stateMap['move_deadline'] is int
+          ? stateMap['move_deadline'] as int
+          : null;
+      final elapsed = stateMap['elapsed_time'] is int
+          ? stateMap['elapsed_time'] as int
+          : null;
+      final timeLimit = stateMap['time_limit'] is int
+          ? stateMap['time_limit'] as int
+          : null;
+      List<int>? order;
+      final orderRaw = stateMap['player_order'];
+      if (orderRaw is List) {
+        order = orderRaw.map((e) => int.tryParse(e.toString()) ?? -1).toList();
+      }
+
+      final startOffsets = <int, int>{};
+      final startRaw = stateMap['start_offsets'];
+      if (startRaw is Map) {
+        startRaw.forEach((k, v) {
+          final id = int.tryParse(k.toString());
+          final off = int.tryParse(v.toString());
+          if (id != null && off != null) {
+            startOffsets[id] = off;
+          }
+        });
+      }
+
+      final homePaths = <int, List<int>>{};
+      final homeRaw = stateMap['home_paths'];
+      if (homeRaw is Map) {
+        homeRaw.forEach((k, v) {
+          final id = int.tryParse(k.toString());
+          if (id != null && v is List) {
+            homePaths[id] =
+            List<int>.from(v.map((e) => int.tryParse(e.toString()) ?? 0));
+          }
+        });
+      }
+
+      final points = <int, int>{};
+      final pointsRaw = stateMap['points'];
+      if (pointsRaw is Map) {
+        pointsRaw.forEach((k, v) {
+          final id = int.tryParse(k.toString());
+          final value = int.tryParse(v.toString());
+          if (id != null && value != null) {
+            points[id] = value;
+          }
+        });
+      }
+
+      final safeCells = <int>[];
+      final safeRaw = stateMap['safe_cells'];
+      if (safeRaw is List) {
+        safeCells.addAll(safeRaw.map((e) => int.tryParse(e.toString()) ?? 0));
+      }
+
+      state = state.copyWith(
+        positions: pos,
+        turn: turn,
+        dice: dice,
+        selectedDie: null,
+        moveDeadline: moveDeadline,
+        elapsedTime: elapsed,
+        timeLimit: timeLimit,
+        playerOrder: order,
+        startOffsets: startOffsets.isEmpty ? state.startOffsets : startOffsets,
+        homePaths: homePaths.isEmpty ? state.homePaths : homePaths,
+        points: points.isEmpty ? state.points : points,
+        safeCells: safeCells,);
+
+      // Call startGame only once when players are not yet created
+      if (state.players.isEmpty && order != null && startOffsets.isNotEmpty) {
+        startGame();
+      }
+
+    } else if (parsed['type'] == 'roll') {
+      final diceRaw = parsed['dice'];
+      List<int>? dice;
+      if (diceRaw is int) {
+        dice = [diceRaw];
+      } else if (diceRaw is List) {
+        dice = List<int>.from(diceRaw.map((e) => e as int));
+      }
+      debugPrint('🎲 Dice roll result: $dice');
+      state = state.copyWith(dice: dice, selectedDie: null);
+    } else if (parsed['type'] == 'error') {
+      final msg = parsed['message'] ?? 'Unknown error';
+      debugPrint('❌ Server error: $msg');
+    } else if (parsed['type'] == 'game_over') {
+      final winner = parsed['winner'];
+      debugPrint('🏆 Game Over! Winner is player $winner');
+    } else if (parsed['type'] == 'connection') {
+      final status = parsed['status'];
+      debugPrint('🔌 Connection status: $status');
+    } else if (parsed['type'] == 'player_joined') {
+      final id = parsed['player_id'];
+      debugPrint('👤 Player joined: $id');
+    } else if (parsed['type'] == 'player_left') {
+      final id = parsed['player_id'];
+      debugPrint('👤 Player left: $id');
+    } else {
+      debugPrint('⚠️ Unknown message type: $parsed');
+    }
+  }
+
+  void selectDie(int? die) {
+    if (!mounted) return;
+    state = state.copyWith(selectedDie: die);
+  }
+
+  void socketMover(int playerId, int token, int die) {
+    if (!mounted) return;
+    debugPrint('🟦 Sending move for player $playerId, token $token using die $die');
+    socket.send({
+      'type': 'move',
+      'player_id': playerId,
+      'moves': [
+        {
+          'token': token,
+          'dice': [die]
+        }
+      ]
+    });
+  }
+
+  void roll(int playerId) {
+    if (!mounted) return;
+    debugPrint('🎲 Sending roll for player $playerId');
+    socket.send({'type': 'roll', 'player_id': playerId});
+  }
+
+
+
 
   ///Flags to check if pawn is moving
   bool get _isMoving => state.isMoving;
@@ -101,10 +384,17 @@ class LudoStateNotifier extends StateNotifier<LudoState> {
   bool get _diceStarted => state.diceStarted;
 
   LudoPlayer get currentPlayer =>
-      state.players.firstWhere((element) => element.type == _currentTurn);
+      state.players.firstWhere((player) => player.playerId == state.turn);
 
   ///Fill all players
   List<LudoPlayer> get players => state.players;
+
+  List<int>? get playerOrder => state.playerOrder;
+
+  Map<int, int> get points => state.points;
+
+  Map<int, List<int>> get playerPosition => state.positions;
+
 
   ///Player win, we use `LudoPlayerType` to make it easier to check
   List<LudoPlayerType> get winners => state.winners;
@@ -352,20 +642,95 @@ class LudoStateNotifier extends StateNotifier<LudoState> {
     }
   }
 
+
   void startGame() {
+    final order = state.playerOrder ?? [];
+    final startOffsets = state.startOffsets;
+    final dices = state.dice ??[];
+
+    // Define player types for each corner (assumed order: 0 - green, 1 - yellow, etc.)
+    final corners = [
+      LudoPlayerType.green,
+      LudoPlayerType.yellow,
+      LudoPlayerType.blue,
+      LudoPlayerType.red,
+    ];
+
+    final List<LudoPlayer> playerList = [];
+
+    for (int i = 0; i < order.length && i < 4; i++) {
+      final playerId = order[i];
+      // final type = corners[i];
+      final offset = startOffsets[playerId] ?? 0;
+      final corner = _cornerForOffset(offset);
+      final type = _playerTypeForCorner(corner);
+      final initialStep = 0;
+      // final initialStep = dices.isNotEmpty && dices.length > 1 ? 0 :-1;
+
+      playerList.add(
+        LudoPlayer(
+          type,playerId,corner,initialStep: initialStep
+        ),
+      );
+    }
+
     state = state.copyWith(
       winners: [],
-      players: [
-        LudoPlayer(LudoPlayerType.green),
-        LudoPlayer(LudoPlayerType.yellow),
-        LudoPlayer(LudoPlayerType.blue),
-        LudoPlayer(LudoPlayerType.red),
-      ],
+      players: playerList,
     );
   }
 
+  int _cornerForOffset(int offset) {
+    switch (offset) {
+      case 0:
+        return 0; // green
+      case 39:
+        return 1; // yellow
+      case 13:
+        return 2; // red
+      case 26:
+        return 3; // blue
+      default:
+        return 0;
+    }
+  }
+
+  LudoPlayerType _playerTypeForCorner(int corner) {
+    switch (corner) {
+      case 0:
+        return LudoPlayerType.green;
+      case 1:
+        return LudoPlayerType.yellow;
+      case 2:
+        return LudoPlayerType.red;
+      case 3:
+        return LudoPlayerType.blue;
+      default:
+        return LudoPlayerType.green;
+    }
+  }
+
+
+
+
+
+
+  // void startGame() {
+  //   state = state.copyWith(
+  //     winners: [],
+  //     players: [
+  //       LudoPlayer(LudoPlayerType.green),
+  //       LudoPlayer(LudoPlayerType.yellow),
+  //       LudoPlayer(LudoPlayerType.blue),
+  //       LudoPlayer(LudoPlayerType.red),
+  //     ],
+  //   );
+  // }
   @override
   void dispose() {
+    debugPrint('❌ Disposing GameStateNotifier');
+    _sub?.cancel();
+    socket.close();
     super.dispose();
   }
 }
@@ -373,5 +738,6 @@ class LudoStateNotifier extends StateNotifier<LudoState> {
 final ludoStateNotifier =
 StateNotifierProvider.family<LudoStateNotifier, LudoState, int>((ref, id) {
   final notifier = LudoStateNotifier();
+  unawaited(notifier.connect(id.toString()));
   return notifier;
 });

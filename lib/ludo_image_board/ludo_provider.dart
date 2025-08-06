@@ -252,10 +252,10 @@ class LudoProvider extends ChangeNotifier {
     winners.clear();
     players.clear();
     players.addAll([
-      LudoPlayer(LudoPlayerType.green),
-      LudoPlayer(LudoPlayerType.yellow),
-      LudoPlayer(LudoPlayerType.blue),
-      LudoPlayer(LudoPlayerType.red),
+      LudoPlayer(LudoPlayerType.green,0,0),
+      LudoPlayer(LudoPlayerType.yellow,0,0),
+      LudoPlayer(LudoPlayerType.blue,0,0),
+      LudoPlayer(LudoPlayerType.red,0,0),
     ]);
   }
 

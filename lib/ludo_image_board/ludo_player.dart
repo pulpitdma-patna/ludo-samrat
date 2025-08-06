@@ -7,6 +7,12 @@ class LudoPlayer {
   ///Player type
   final LudoPlayerType type;
 
+  ///Player id
+  final int playerId;
+
+  ///Player corner
+  final int cornerIndex;
+
   ///Pawn's paths
   late List<List<double>> path;
 
@@ -16,12 +22,15 @@ class LudoPlayer {
   ///Pawn widgets
   final List<PawnWidget> pawns = [];
 
+
+  late int initialStep;
+
   ///Player color
   late Color color;
 
-  LudoPlayer(this.type) {
+  LudoPlayer(this.type, this.playerId, this.cornerIndex, {this.initialStep = -1}) {
     for (int i = 0; i < 4; i++) {
-      pawns.add(PawnWidget(i, type));
+      pawns.add(PawnWidget(i, type,step: initialStep,));
     }
 
     ///Initialize path

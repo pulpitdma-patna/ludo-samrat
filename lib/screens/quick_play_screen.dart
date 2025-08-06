@@ -401,18 +401,18 @@ class _QuickPlayScreenState extends State<QuickPlayScreen> {
           final gameId = result.data?['game_id'];
           final matchId = result.data?['match_id'];
           if (gameId != null && matchId != null) {
-            // if (mounted) {
-            //   Navigator.push(context, MaterialPageRoute(builder: (context) {
-            //     return MainScreen(gameId: gameId,gameData: data,);
-            //   },));
-            // }
             context.read<GameProvider>().registerQuickPlay(gameId, id, matchId);
             if (mounted) {
-              context.push(
-                '/game/$gameId',
-                extra: data,
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) {
+                return MainScreen(gameId: gameId,gameData: data,);
+              },));
             }
+            // if (mounted) {
+            //   context.push(
+            //     '/game/$gameId',
+            //     extra: data,
+            //   );
+            // }
           } else {
             if (mounted) context.push('/queue?roomId=$id');
           }
